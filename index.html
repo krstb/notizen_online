@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Notizen – stabil</title>
+<title>Firebase Notizen</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -26,7 +26,7 @@
 </div>
 
 <form id="form" class="flex gap-2 mb-6 hidden">
-  <input id="text" class="flex-1 border rounded-xl p-3" placeholder="Neue Notiz…">
+  <input id="text" class="flex-1 border rounded-xl p-3" placeholder="Neue Notiz eingeben…">
   <select id="priority" class="border rounded-xl p-3">
     <option value="niedrig">Niedrig</option>
     <option value="mittel">Mittel</option>
@@ -40,7 +40,7 @@
 </div>
 
 <script type="module">
-/* 🔥 Imports */
+/* 🔥 Firebase SDKs (CDN) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
   getAuth,
@@ -63,13 +63,17 @@ import {
   orderBy
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-/* 🔧 Firebase Config */
+/* ✅ DEINE FIREBASE ZUGANGSDATEN */
 const firebaseConfig = {
   apiKey: "AIzaSyAy_eDSW5Q9KzZFptsTK5DGthk1ed2Objc",
   authDomain: "notizentest-1bcdc.firebaseapp.com",
   projectId: "notizentest-1bcdc",
+  storageBucket: "notizentest-1bcdc.firebasestorage.app",
+  messagingSenderId: "570048086764",
+  appId: "1:570048086764:web:9137d39d90d16b423a1bc9"
 };
 
+/* 🚀 Initialisierung */
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -87,11 +91,11 @@ const list = document.getElementById("list");
 const textInput = document.getElementById("text");
 const priorityInput = document.getElementById("priority");
 
-/* 🔐 Auth Buttons */
+/* 🔐 Login / Logout */
 loginBtn.onclick = () => signInWithPopup(auth, provider);
 logoutBtn.onclick = () => signOut(auth);
 
-/* 👀 Auth State */
+/* 👀 Auth State Observer */
 onAuthStateChanged(auth, user => {
 
   // 🔥 alten Listener immer stoppen
@@ -117,28 +121,29 @@ onAuthStateChanged(auth, user => {
   startNotesListener(user.uid);
 });
 
-/* 📡 Realtime Listener */
+/* 📡 Realtime Firestore Listener */
 function startNotesListener(uid) {
   const q = query(
     collection(db, `notes/${uid}/userNotes`),
     orderBy("createdAt", "desc")
   );
 
-  unsubscribeNotes = onSnapshot(q, snap => {
+  unsubscribeNotes = onSnapshot(q, snapshot => {
     list.innerHTML = "";
 
-    if (snap.empty) {
-      list.innerHTML = "<p class='text-slate-500'>Keine Notizen</p>";
+    if (snapshot.empty) {
+      list.innerHTML = "<p class='text-slate-500'>Keine Notizen vorhanden</p>";
       return;
     }
 
-    snap.forEach(d => render(d.id, d.data(), uid));
+    snapshot.forEach(d => renderNote(d.id, d.data(), uid));
   });
 }
 
-/* ➕ Add Note */
+/* ➕ Neue Notiz */
 form.onsubmit = async e => {
   e.preventDefault();
+
   const text = textInput.value.trim();
   if (!text) return;
 
@@ -154,8 +159,8 @@ form.onsubmit = async e => {
   textInput.value = "";
 };
 
-/* 🖼 Render */
-function render(id, note, uid) {
+/* 🖼 Notiz anzeigen */
+function renderNote(id, note, uid) {
   const div = document.createElement("div");
   div.className = "p-4 rounded-xl border flex justify-between items-center";
 
@@ -176,12 +181,13 @@ function render(id, note, uid) {
     }
 
     if (e.target.dataset.edit !== undefined) {
-      const neu = prompt("Bearbeiten:", note.text);
-      if (neu)
+      const neu = prompt("Notiz bearbeiten:", note.text);
+      if (neu) {
         await updateDoc(
           doc(db, `notes/${uid}/userNotes/${id}`),
           { text: neu }
         );
+      }
     }
   };
 
