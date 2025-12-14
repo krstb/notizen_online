@@ -3,42 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Notizen – Schnell & Sicher</title>
+<title>Firebase Notizen – stabil</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-blue-50 min-h-screen flex justify-center p-6">
+<body class="bg-slate-100 min-h-screen flex justify-center p-6">
 
 <div class="w-full max-w-xl bg-white rounded-3xl shadow-xl p-8">
 
 <h1 class="text-3xl font-bold text-center mb-6">Meine Notizen</h1>
 
-<p id="status" class="text-center mb-4 text-slate-600">Status wird geladen…</p>
+<p id="status" class="text-center text-slate-600 mb-4">Lade…</p>
 
 <div class="flex justify-center gap-3 mb-6">
-<button id="login" class="bg-blue-600 text-white px-5 py-2 rounded-xl hidden">Mit Google anmelden</button>
-<button id="logout" class="bg-red-500 text-white px-5 py-2 rounded-xl hidden">Abmelden</button>
+  <button id="login" class="bg-blue-600 text-white px-5 py-2 rounded-xl hidden">
+    Mit Google anmelden
+  </button>
+  <button id="logout" class="bg-red-500 text-white px-5 py-2 rounded-xl hidden">
+    Abmelden
+  </button>
 </div>
 
 <form id="form" class="flex gap-2 mb-6 hidden">
-<input id="text" class="flex-1 border rounded-xl p-3" placeholder="Neue Notiz…">
-<select id="priority" class="border rounded-xl p-3">
-<option value="niedrig">Niedrig</option>
-<option value="mittel">Mittel</option>
-<option value="hoch">Hoch</option>
-</select>
-<button class="bg-cyan-600 text-white px-4 rounded-xl">+</button>
+  <input id="text" class="flex-1 border rounded-xl p-3" placeholder="Neue Notiz…">
+  <select id="priority" class="border rounded-xl p-3">
+    <option value="niedrig">Niedrig</option>
+    <option value="mittel">Mittel</option>
+    <option value="hoch">Hoch</option>
+  </select>
+  <button class="bg-cyan-600 text-white px-4 rounded-xl">+</button>
 </form>
 
-<div id="list" class="space-y-3 text-slate-800"></div>
+<div id="list" class="space-y-3"></div>
 
 </div>
 
 <script type="module">
+/* 🔥 Imports */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp,
+  query,
+  orderBy
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 /* 🔧 Firebase Config */
 const firebaseConfig = {
@@ -53,8 +76,7 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 /* 🧠 State */
-let user = null;
-let unsubscribe = null;
+let unsubscribeNotes = null;
 
 /* 📦 DOM */
 const status = document.getElementById("status");
@@ -65,60 +87,77 @@ const list = document.getElementById("list");
 const textInput = document.getElementById("text");
 const priorityInput = document.getElementById("priority");
 
-/* 🔐 Auth */
+/* 🔐 Auth Buttons */
 loginBtn.onclick = () => signInWithPopup(auth, provider);
 logoutBtn.onclick = () => signOut(auth);
 
-/* 👀 Auth Observer */
-onAuthStateChanged(auth, u => {
-  user = u;
-  if (u) {
-    status.textContent = `Angemeldet als ${u.email}`;
-    loginBtn.classList.add("hidden");
-    logoutBtn.classList.remove("hidden");
-    form.classList.remove("hidden");
-    listen();
-  } else {
+/* 👀 Auth State */
+onAuthStateChanged(auth, user => {
+
+  // 🔥 alten Listener immer stoppen
+  if (unsubscribeNotes) {
+    unsubscribeNotes();
+    unsubscribeNotes = null;
+  }
+
+  if (!user) {
     status.textContent = "Bitte anmelden";
     loginBtn.classList.remove("hidden");
     logoutBtn.classList.add("hidden");
     form.classList.add("hidden");
     list.innerHTML = "";
-    if (unsubscribe) unsubscribe();
+    return;
   }
+
+  status.textContent = `Angemeldet als ${user.email}`;
+  loginBtn.classList.add("hidden");
+  logoutBtn.classList.remove("hidden");
+  form.classList.remove("hidden");
+
+  startNotesListener(user.uid);
 });
 
 /* 📡 Realtime Listener */
-function listen() {
+function startNotesListener(uid) {
   const q = query(
-    collection(db, `notes/${user.uid}/userNotes`),
+    collection(db, `notes/${uid}/userNotes`),
     orderBy("createdAt", "desc")
   );
 
-  unsubscribe = onSnapshot(q, snap => {
+  unsubscribeNotes = onSnapshot(q, snap => {
     list.innerHTML = "";
-    snap.forEach(d => render(d.id, d.data()));
+
+    if (snap.empty) {
+      list.innerHTML = "<p class='text-slate-500'>Keine Notizen</p>";
+      return;
+    }
+
+    snap.forEach(d => render(d.id, d.data(), uid));
   });
 }
 
-/* ➕ Add */
+/* ➕ Add Note */
 form.onsubmit = async e => {
   e.preventDefault();
-  if (!textInput.value.trim()) return;
+  const text = textInput.value.trim();
+  if (!text) return;
 
-  await addDoc(collection(db, `notes/${user.uid}/userNotes`), {
-    text: textInput.value,
-    priority: priorityInput.value,
-    createdAt: serverTimestamp()
-  });
+  await addDoc(
+    collection(db, `notes/${auth.currentUser.uid}/userNotes`),
+    {
+      text,
+      priority: priorityInput.value,
+      createdAt: serverTimestamp()
+    }
+  );
 
   textInput.value = "";
 };
 
 /* 🖼 Render */
-function render(id, note) {
+function render(id, note, uid) {
   const div = document.createElement("div");
-  div.className = "p-4 rounded-xl border flex justify-between";
+  div.className = "p-4 rounded-xl border flex justify-between items-center";
 
   div.innerHTML = `
     <div>
@@ -126,24 +165,29 @@ function render(id, note) {
       <p class="text-sm text-slate-500">${note.priority}</p>
     </div>
     <div class="flex gap-2">
-      <button data-e="${id}">✏️</button>
-      <button data-d="${id}">🗑</button>
+      <button data-edit>✏️</button>
+      <button data-del>🗑</button>
     </div>
   `;
 
   div.onclick = async e => {
-    if (e.target.dataset.d)
-      await deleteDoc(doc(db, `notes/${user.uid}/userNotes/${id}`));
+    if (e.target.dataset.del !== undefined) {
+      await deleteDoc(doc(db, `notes/${uid}/userNotes/${id}`));
+    }
 
-    if (e.target.dataset.e) {
-      const n = prompt("Bearbeiten:", note.text);
-      if (n)
-        await updateDoc(doc(db, `notes/${user.uid}/userNotes/${id}`), { text: n });
+    if (e.target.dataset.edit !== undefined) {
+      const neu = prompt("Bearbeiten:", note.text);
+      if (neu)
+        await updateDoc(
+          doc(db, `notes/${uid}/userNotes/${id}`),
+          { text: neu }
+        );
     }
   };
 
   list.appendChild(div);
 }
 </script>
+
 </body>
 </html>
