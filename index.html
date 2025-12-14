@@ -1,426 +1,149 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sichere Firebase Notizen (Google Auth)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #e0f7fa;
-        }
-        @keyframes pulse-success {
-            0% { box-shadow: 0 0 0 0 rgba(8, 145, 178, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(8, 145, 178, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(8, 145, 178, 0); }
-        }
-        .pulse-success {
-            animation: pulse-success 0.6s cubic-bezier(0.4, 0, 0.6, 1);
-        }
-        @keyframes pulse-danger {
-            0% { border-color: #ef4444; }
-            50% { border-color: #fca5a5; }
-            100% { border-color: #ef4444; }
-        }
-        .pulse-danger {
-            animation: pulse-danger 0.5s ease-in-out;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firebase Notizen – Schnell & Sicher</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-blue-50 min-h-screen flex flex-col items-center p-4 md:p-8">
 
-    <div class="w-full max-w-xl bg-white rounded-3xl shadow-xl p-6 md:p-10 mt-10">
+<body class="bg-blue-50 min-h-screen flex justify-center p-6">
 
-        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-slate-900 mb-6">
-            Meine Privaten Notizen
-        </h1>
-        
-        <div class="mb-6 flex flex-col items-center gap-3">
-            <p id="statusMessage" class="text-center text-lg text-slate-600">Lade Status...</p>
-            <button id="signInBtn" 
-                    class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 active:scale-95 hover:bg-blue-700 hidden">
-                Mit Google anmelden
-            </button>
-            <button id="signOutBtn" 
-                    class="bg-red-500 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition-all duration-300 hover:bg-red-600 hidden">
-                Abmelden
-            </button>
-        </div>
-        
-        <form id="noteForm" class="flex flex-col gap-4 mb-8 hidden"> <div class="flex flex-col md:flex-row gap-4">
-                 <input type="text" id="noteInput" placeholder="Neue Notiz hier eingeben..."
-                       class="flex-1 p-3 rounded-xl border-2 border-slate-200 focus:outline-none focus:border-cyan-500 transition-all duration-300 text-slate-800 text-lg shadow-sm">
-                 <select id="priorityInput" class="p-3 rounded-xl border-2 border-slate-200 focus:outline-none focus:border-cyan-500 transition-all duration-300 text-slate-800 text-lg shadow-sm bg-white">
-                    <option value="niedrig" selected>Niedrig</option>
-                    <option value="mittel">Mittel</option>
-                    <option value="hoch">Hoch</option>
-                </select>
-            </div>
-            <button type="submit"
-                    class="w-full bg-cyan-600 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 active:scale-95 hover:bg-cyan-700
-                           bg-gradient-to-r from-cyan-500 to-cyan-700 hover:from-cyan-600 hover:to-cyan-800">
-                Hinzufügen
-            </button>
-        </form>
+<div class="w-full max-w-xl bg-white rounded-3xl shadow-xl p-8">
 
-        <div id="notesContainer" class="space-y-4">
-            <p id="loadingMessage" class="text-center text-slate-500">Warten auf Anmeldung...</p>
-        </div>
+<h1 class="text-3xl font-bold text-center mb-6">Meine Notizen</h1>
 
-        <button id="exportCsvBtn" class="w-full bg-slate-200 text-slate-700 font-semibold py-3 px-8 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 active:scale-95 hover:bg-slate-300 mt-8 hidden">
-            Notizen als CSV exportieren
-        </button>
+<p id="status" class="text-center mb-4 text-slate-600">Status wird geladen…</p>
+
+<div class="flex justify-center gap-3 mb-6">
+<button id="login" class="bg-blue-600 text-white px-5 py-2 rounded-xl hidden">Mit Google anmelden</button>
+<button id="logout" class="bg-red-500 text-white px-5 py-2 rounded-xl hidden">Abmelden</button>
+</div>
+
+<form id="form" class="flex gap-2 mb-6 hidden">
+<input id="text" class="flex-1 border rounded-xl p-3" placeholder="Neue Notiz…">
+<select id="priority" class="border rounded-xl p-3">
+<option value="niedrig">Niedrig</option>
+<option value="mittel">Mittel</option>
+<option value="hoch">Hoch</option>
+</select>
+<button class="bg-cyan-600 text-white px-4 rounded-xl">+</button>
+</form>
+
+<div id="list" class="space-y-3 text-slate-800"></div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+/* 🔧 Firebase Config */
+const firebaseConfig = {
+  apiKey: "AIzaSyAy_eDSW5Q9KzZFptsTK5DGthk1ed2Objc",
+  authDomain: "notizentest-1bcdc.firebaseapp.com",
+  projectId: "notizentest-1bcdc",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+/* 🧠 State */
+let user = null;
+let unsubscribe = null;
+
+/* 📦 DOM */
+const status = document.getElementById("status");
+const loginBtn = document.getElementById("login");
+const logoutBtn = document.getElementById("logout");
+const form = document.getElementById("form");
+const list = document.getElementById("list");
+const textInput = document.getElementById("text");
+const priorityInput = document.getElementById("priority");
+
+/* 🔐 Auth */
+loginBtn.onclick = () => signInWithPopup(auth, provider);
+logoutBtn.onclick = () => signOut(auth);
+
+/* 👀 Auth Observer */
+onAuthStateChanged(auth, u => {
+  user = u;
+  if (u) {
+    status.textContent = `Angemeldet als ${u.email}`;
+    loginBtn.classList.add("hidden");
+    logoutBtn.classList.remove("hidden");
+    form.classList.remove("hidden");
+    listen();
+  } else {
+    status.textContent = "Bitte anmelden";
+    loginBtn.classList.remove("hidden");
+    logoutBtn.classList.add("hidden");
+    form.classList.add("hidden");
+    list.innerHTML = "";
+    if (unsubscribe) unsubscribe();
+  }
+});
+
+/* 📡 Realtime Listener */
+function listen() {
+  const q = query(
+    collection(db, `notes/${user.uid}/userNotes`),
+    orderBy("createdAt", "desc")
+  );
+
+  unsubscribe = onSnapshot(q, snap => {
+    list.innerHTML = "";
+    snap.forEach(d => render(d.id, d.data()));
+  });
+}
+
+/* ➕ Add */
+form.onsubmit = async e => {
+  e.preventDefault();
+  if (!textInput.value.trim()) return;
+
+  await addDoc(collection(db, `notes/${user.uid}/userNotes`), {
+    text: textInput.value,
+    priority: priorityInput.value,
+    createdAt: serverTimestamp()
+  });
+
+  textInput.value = "";
+};
+
+/* 🖼 Render */
+function render(id, note) {
+  const div = document.createElement("div");
+  div.className = "p-4 rounded-xl border flex justify-between";
+
+  div.innerHTML = `
+    <div>
+      <p class="font-semibold">${note.text}</p>
+      <p class="text-sm text-slate-500">${note.priority}</p>
     </div>
+    <div class="flex gap-2">
+      <button data-e="${id}">✏️</button>
+      <button data-d="${id}">🗑</button>
+    </div>
+  `;
 
-    <script type="module">
-        // 1. Module importieren
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
-        
-        // Firestore Module
-        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-        
-        // Auth Module
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+  div.onclick = async e => {
+    if (e.target.dataset.d)
+      await deleteDoc(doc(db, `notes/${user.uid}/userNotes/${id}`));
 
-        // 2. Ihre Konfiguration
-        const firebaseConfig = {
-            apiKey: "AIzaSyAy_eDSW5Q9KzZFptsTK5DGthk1ed2Objc", // NEU: Ihr API Key
-            authDomain: "notizentest-1bcdc.firebaseapp.com",
-            projectId: "notizentest-1bcdc",
-            storageBucket: "notizentest-1bcdc.firebasestorage.app",
-            messagingSenderId: "570048086764",
-            appId: "1:570048086764:web:9137d39d90d16b423a1bc9",
-            measurementId: "G-10XRZ2Q8E3"
-        };
+    if (e.target.dataset.e) {
+      const n = prompt("Bearbeiten:", note.text);
+      if (n)
+        await updateDoc(doc(db, `notes/${user.uid}/userNotes/${id}`), { text: n });
+    }
+  };
 
-        // 3. Initialisierung der Dienste
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-        // const analytics = getAnalytics(app); // optional
-        
-        // --- Globale Variablen & DOM-Elemente ---
-        let currentUser = null; 
-        
-        // DOM Elements
-        const noteForm = document.getElementById('noteForm');
-        const noteInput = document.getElementById('noteInput');
-        const priorityInput = document.getElementById('priorityInput');
-        const notesContainer = document.getElementById('notesContainer');
-        const loadingMessage = document.getElementById('loadingMessage');
-        const signInBtn = document.getElementById('signInBtn');
-        const signOutBtn = document.getElementById('signOutBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const exportCsvBtn = document.getElementById('exportCsvBtn');
-
-        // --- Authentifizierungslogik ---
-        
-        signInBtn.addEventListener('click', () => {
-             // Google Pop-up öffnen
-            signInWithPopup(auth, provider).catch(error => {
-                console.error("Anmeldefehler:", error);
-                statusMessage.textContent = "Anmeldung fehlgeschlagen.";
-            });
-        });
-
-        signOutBtn.addEventListener('click', () => {
-            signOut(auth).catch(error => {
-                 console.error("Abmeldefehler:", error);
-            });
-        });
-        
-        // Wichtig: Beobachtet den Anmeldestatus und aktualisiert die UI
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (user) {
-                // ANGMELDET
-                statusMessage.textContent = `Angemeldet als: ${user.email}`;
-                signInBtn.classList.add('hidden');
-                signOutBtn.classList.remove('hidden');
-                noteForm.classList.remove('hidden');
-                exportCsvBtn.classList.remove('hidden');
-                renderNotes();
-            } else {
-                // ABGEMELDET
-                statusMessage.textContent = 'Bitte melden Sie sich an, um Ihre Notizen zu sehen.';
-                signInBtn.classList.remove('hidden');
-                signOutBtn.classList.add('hidden');
-                noteForm.classList.add('hidden');
-                exportCsvBtn.classList.add('hidden');
-                notesContainer.innerHTML = '';
-            }
-        });
-        
-        // --- Firestore Data Handling ---
-        
-        /**
-         * Ruft die spezifische Notizen-Sammlung für den angemeldeten Benutzer ab.
-         * Entspricht dem gesicherten Pfad: notes/{UID}/userNotes
-         */
-        const getUserNotesCollection = () => {
-            if (!currentUser) return null;
-            // Wir verwenden 'collection' anstelle des alten 'db.collection'
-            return collection(db, `notes/${currentUser.uid}/userNotes`); 
-        };
-
-        const getNotes = async () => {
-            if (!currentUser) return [];
-            
-            loadingMessage.textContent = 'Notizen werden geladen...';
-            notesContainer.innerHTML = '';
-            notesContainer.appendChild(loadingMessage);
-
-            try {
-                const userNotesRef = getUserNotesCollection();
-                // Firestore Abfrage sortieren (optional)
-                const q = query(userNotesRef, orderBy('createdAt', 'desc')); 
-                
-                // Wir verwenden getDocs und warten auf das Ergebnis
-                const snapshot = await getDocs(q); 
-                
-                const notes = snapshot.docs.map(doc => ({
-                    id: doc.id, 
-                    ...doc.data()
-                }));
-                return notes;
-            } catch (error) {
-                console.error("Fehler beim Laden der Notizen:", error);
-                loadingMessage.textContent = 'Fehler beim Laden der Notizen. Regeln prüfen!';
-                return [];
-            }
-        };
-
-        // --- UI Rendering ---
-        const priorityColors = {
-            hoch: 'bg-red-500',
-            mittel: 'bg-yellow-400',
-            niedrig: 'bg-green-500'
-        };
-        // ... (Der Rest der UI-Logik von renderNotes und createNoteView bleibt gleich)
-        const renderNotes = async () => {
-            const notes = await getNotes(); 
-
-            notesContainer.innerHTML = ''; 
-            
-            if (notes.length === 0) {
-                loadingMessage.textContent = 'Sie haben noch keine Notizen.';
-                notesContainer.appendChild(loadingMessage);
-                return;
-            }
-
-            // Sortieren nach Priorität (Zusätzliche Sortierung)
-            const priorityOrder = { hoch: 3, mittel: 2, niedrig: 1 };
-            notes.sort((a, b) => {
-                const priorityA = priorityOrder[a.priority] || 0;
-                const priorityB = priorityOrder[b.priority] || 0;
-                if (priorityB !== priorityA) return priorityB - priorityA;
-
-                const dateA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
-                const dateB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
-                return dateB - dateA;
-            });
-
-            notes.forEach(note => {
-                const noteElement = document.createElement('div');
-                noteElement.className = 'note-item flex items-center justify-between p-4 bg-white rounded-xl shadow-lg border border-slate-200 transition-all duration-300 transform hover:scale-[1.01] hover:shadow-xl';
-                noteElement.dataset.id = note.id; 
-                noteElement.innerHTML = createNoteView(note);
-                notesContainer.appendChild(noteElement);
-            });
-        };
-        
-        const createNoteView = (note) => `
-            <div class="flex items-center flex-1 min-w-0">
-                 <span class="w-3 h-3 rounded-full mr-4 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
-                 <p class="text-slate-800 break-words text-lg truncate">${note.text}</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="edit-btn text-cyan-500 hover:text-cyan-700 transition-colors duration-200 transform hover:scale-110 active:scale-95" aria-label="Notiz bearbeiten">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" /></svg>
-                </button>
-                <button class="delete-btn text-red-400 hover:text-red-600 transition-colors duration-200 transform hover:scale-110 active:scale-95" aria-label="Notiz löschen">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                </button>
-            </div>
-        `;
-
-        // --- Event Listeners ---
-
-        // Add a new note (Jetzt mit Auth-Prüfung)
-        noteForm.addEventListener('submit', async (e) => { 
-            e.preventDefault();
-            if (!currentUser) return alert("Bitte zuerst anmelden.");
-
-            const noteText = noteInput.value.trim();
-            if (noteText === '') {
-                // ... Fehler-UI
-                noteInput.classList.add('border-red-500', 'pulse-danger');
-                setTimeout(() => noteInput.classList.remove('border-red-500', 'pulse-danger'), 1000);
-                return;
-            }
-
-            try {
-                const userNotesRef = getUserNotesCollection();
-                const newNoteData = {
-                    text: noteText,
-                    priority: priorityInput.value,
-                    // Wir verwenden serverTimestamp() aus den importierten Modulen
-                    createdAt: serverTimestamp() 
-                };
-                
-                // Wir verwenden addDoc anstelle des alten 'notesCollection.add'
-                await addDoc(userNotesRef, newNoteData); 
-                
-                noteInput.value = '';
-                priorityInput.value = 'niedrig';
-                noteInput.focus();
-                
-                await renderNotes(); 
-                
-                // ... Erfolgs-UI
-                noteInput.classList.add('border-cyan-600', 'pulse-success');
-                setTimeout(() => noteInput.classList.remove('border-cyan-600', 'pulse-success'), 500);
-
-            } catch (error) {
-                console.error("Fehler beim Hinzufügen der Notiz:", error);
-                alert("Fehler beim Speichern der Notiz: " + error.message);
-            }
-        });
-
-        // Handle clicks on the notes list (Update/Delete Logik)
-        notesContainer.addEventListener('click', async (e) => { 
-            const target = e.target.closest('button');
-            if (!target || !currentUser) return; // Auth-Prüfung
-            
-            const noteElement = target.closest('.note-item');
-            const noteId = noteElement.dataset.id; // Firestore ID ist ein String
-            
-            // Referenz auf das spezifische Notizdokument
-            const noteRef = doc(db, `notes/${currentUser.uid}/userNotes`, noteId);
-
-            // Edit button clicked
-            if (target.classList.contains('edit-btn')) {
-                 // Wir müssen die Notiz aus Firestore holen
-                const docSnap = await getDocs(query(noteRef));
-                const originalNote = docSnap.docs[0].data();
-                
-                // ... (HTML-Code für den Edit-Modus)
-                 noteElement.innerHTML = `
-                    <div class="flex flex-col gap-3 flex-1">
-                        <input type="text" value="${originalNote.text}" class="edit-input w-full p-3 rounded-lg border-2 border-cyan-500 focus:outline-none transition-colors duration-300 text-slate-800 text-lg shadow-sm">
-                        <select class="edit-priority-input w-full p-3 rounded-lg border-2 border-cyan-500 focus:outline-none bg-white text-lg">
-                            <option value="niedrig" ${originalNote.priority === 'niedrig' ? 'selected' : ''}>Niedrig</option>
-                            <option value="mittel" ${originalNote.priority === 'mittel' ? 'selected' : ''}>Mittel</option>
-                            <option value="hoch" ${originalNote.priority === 'hoch' ? 'selected' : ''}>Hoch</option>
-                        </select>
-                        <div class="flex items-center gap-2 mt-2">
-                            <button class="save-btn py-1 px-3 rounded-md text-white font-semibold bg-green-500 hover:bg-green-600 transition-colors duration-200 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Speichern
-                            </button>
-                            <button class="cancel-action-btn py-1 px-3 rounded-md text-slate-700 font-semibold bg-gray-200 hover:bg-gray-300 transition-colors duration-200 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Abbrechen
-                            </button>
-                        </div>
-                    </div>`;
-                noteElement.querySelector('.edit-input').focus();
-            }
-            
-            // Delete confirmation view (Logik bleibt gleich)
-            else if (target.classList.contains('delete-btn')) {
-                 noteElement.innerHTML = `
-                    <div class="flex flex-col gap-3 flex-1">
-                        <p class="text-slate-800 text-lg">Sind Sie sicher?</p>
-                        <div class="flex items-center gap-2">
-                            <button class="confirm-delete-btn py-1 px-3 rounded-md text-white font-semibold bg-red-500 hover:bg-red-600 transition-colors duration-200">Ja, löschen</button>
-                            <button class="cancel-action-btn py-1 px-3 rounded-md text-slate-700 font-semibold bg-gray-200 hover:bg-gray-300 transition-colors duration-200">Abbrechen</button>
-                        </div>
-                    </div>`;
-            }
-
-            // Save button clicked (nach Bearbeitung)
-            else if (target.classList.contains('save-btn')) {
-                const newText = noteElement.querySelector('.edit-input').value.trim();
-                const newPriority = noteElement.querySelector('.edit-priority-input').value;
-                if (newText) {
-                    try {
-                        // Wir verwenden updateDoc
-                        await updateDoc(noteRef, { 
-                            text: newText, 
-                            priority: newPriority 
-                        });
-                        await renderNotes();
-                    } catch (error) {
-                        console.error("Fehler beim Aktualisieren:", error);
-                        alert("Fehler beim Aktualisieren der Notiz.");
-                    }
-                } else {
-                    await renderNotes(); 
-                }
-            }
-
-            // Confirm delete button clicked
-            else if (target.classList.contains('confirm-delete-btn')) {
-                try {
-                    // Wir verwenden deleteDoc
-                    await deleteDoc(noteRef); 
-                    await renderNotes();
-                } catch (error) {
-                    console.error("Fehler beim Löschen:", error);
-                    alert("Fehler beim Löschen der Notiz.");
-                }
-            }
-            
-            // Cancel button clicked
-            else if (target.classList.contains('cancel-action-btn')) {
-                 await renderNotes();
-            }
-        });
-
-        // --- CSV Export (Jetzt mit Auth-Prüfung) ---
-
-        const exportNotesAsCsv = async () => {
-            if (!currentUser) {
-                alert('Bitte melden Sie sich an, um Notizen zu exportieren.');
-                return;
-            }
-
-            const notes = await getNotes(); 
-            if (notes.length === 0) {
-                alert('Es gibt keine Notizen zum Exportieren.');
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-            const headers = ["ID", "Text", "Priorität", "Erstellungsdatum"];
-            csvContent += headers.join(",") + "\n";
-
-            notes.forEach(note => {
-                // Konvertierung des Firestore Timestamps
-                const timestamp = note.createdAt;
-                const date = timestamp && typeof timestamp.toDate === 'function' 
-                             ? timestamp.toDate().toLocaleString('de-DE') 
-                             : 'N/A';
-                             
-                const escapedText = `"${(note.text || '').replace(/"/g, '""')}"`;
-                const row = [note.id, escapedText, note.priority, date];
-                csvContent += row.join(",") + "\n";
-            });
-
-            // Trigger the download
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `notizen-export-${currentUser.uid}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-
-        exportCsvBtn.addEventListener('click', exportNotesAsCsv);
-    </script>
+  list.appendChild(div);
+}
+</script>
 </body>
 </html>
