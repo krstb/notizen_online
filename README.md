@@ -1,0 +1,1 @@
+Notizen auf Firstore speichern
