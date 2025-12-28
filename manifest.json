@@ -1,7 +1,7 @@
 {
-  "short_name": "Arbeitstage",
-  "name": "Arbeitstage bis zur Rente",
-  "description": "Verbleibenden Nettoarbeitstage bis 2031",
+  "short_name": "Notizen",
+  "name": "Notizen_Online speichert Daten auf Firebase",
+  "description": "Notizen werden nach Prio sortiert",
   "icons": [
     {
       "src": "icon-192.png",
