@@ -6,16 +6,22 @@
     <title>Notizen Online</title>
     
     <link rel="manifest" href="manifest.json">
+    
     <meta name="theme-color" content="#0891b2">
+    
+    <meta name="color-scheme" content="light">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <script>
-      // Service Worker Registrierung (Relativer Pfad für GitHub)
+      // Service Worker Registrierung
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('PWA Service Worker registriert'))
-            .catch(err => console.log('SW Registrierungs-Fehler:', err));
+            .then(reg => console.log('Service Worker registriert'))
+            .catch(err => console.log('Service Worker Fehler', err));
         });
       }
     </script>
@@ -28,6 +34,7 @@
             background-color: #e0f7fa;
         }
 
+        /* Animationen in Cyan */
         @keyframes pulse-success {
             0% { box-shadow: 0 0 0 0 rgba(8, 145, 178, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(8, 145, 178, 0); }
@@ -46,7 +53,10 @@
 <body class="bg-blue-50 min-h-screen flex flex-col items-center p-4 md:p-8">
 
     <div class="w-full max-w-xl bg-white rounded-3xl shadow-xl p-6 md:p-10 mt-10">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-slate-900 mb-6">Notizen</h1>
+
+        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-slate-900 mb-6">
+            Notizen
+        </h1>
 
         <div id="authPanelTop" class="text-center mb-6">
             <button id="loginBtn" class="bg-cyan-600 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition-all duration-300 hover:bg-cyan-700 hidden">
@@ -65,7 +75,9 @@
                         <option value="3">Hoch</option>
                     </select>
                 </div>
-                <button type="submit" class="w-full bg-cyan-600 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 active:scale-95 hover:bg-cyan-700 bg-gradient-to-r from-cyan-500 to-cyan-700 hover:from-cyan-600 hover:to-cyan-800">
+                <button type="submit"
+                        class="w-full bg-cyan-600 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 active:scale-95 hover:bg-cyan-700
+                               bg-gradient-to-r from-cyan-500 to-cyan-700 hover:from-cyan-600 hover:to-cyan-800">
                     Hinzufügen
                 </button>
             </form>
@@ -134,10 +146,10 @@
                  <p class="text-slate-800 break-words text-lg truncate">${note.text}</p>
             </div>
             <div class="flex items-center gap-2">
-                <button class="edit-btn text-cyan-500 hover:text-cyan-700 transition-colors duration-200 transform hover:scale-110 active:scale-95">
+                <button class="edit-btn text-cyan-500 hover:text-cyan-700 transition-colors duration-200 transform hover:scale-110 active:scale-95" aria-label="Bearbeiten">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" /></svg>
                 </button>
-                <button class="delete-btn text-red-400 hover:text-red-600 transition-colors duration-200 transform hover:scale-110 active:scale-95">
+                <button class="delete-btn text-red-400 hover:text-red-600 transition-colors duration-200 transform hover:scale-110 active:scale-95" aria-label="Löschen">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
             </div>
@@ -237,7 +249,7 @@
                 const newPriority = noteElement.querySelector('.edit-priority-input').value; 
                 if (newText) await updateDoc(noteRef, { text: newText, priority: newPriority });
             } else if (target.classList.contains('delete-btn')) {
-                 noteElement.innerHTML = `<div class="flex flex-col gap-3 flex-1"><p>Löschen?</p><div class="flex gap-2"><button class="confirm-delete-btn bg-red-500 text-white px-3 py-1 rounded">Ja</button><button class="cancel-action-btn bg-gray-200 px-3 py-1 rounded">Nein</button></div></div>`;
+                 noteElement.innerHTML = `<div class="flex flex-col gap-3 flex-1"><p class="text-slate-800">Sicher löschen?</p><div class="flex gap-2"><button class="confirm-delete-btn bg-red-500 text-white px-3 py-1 rounded">Ja, weg damit</button><button class="cancel-action-btn bg-gray-200 px-3 py-1 rounded">Abbrechen</button></div></div>`;
             } else if (target.classList.contains('confirm-delete-btn')) {
                 await deleteDoc(noteRef);
             } else if (target.classList.contains('cancel-action-btn')) {
@@ -247,7 +259,7 @@
 
         exportCsvBtn.onclick = () => {
             let csvContent = "data:text/csv;charset=utf-8,\uFEFFID,Text,Priorität,Datum\n";
-            currentNotes.forEach(n => csvContent += `${n.id},"${n.text.replace(/"/g, '""')}",${priorityText[n.priority]},${new Date(n.createdAt).toLocaleString()}\n`);
+            currentNotes.forEach(n => csvContent += `${n.id},"${n.text.replace(/"/g, '""')}",${priorityText[n.priority]},${new Date(n.createdAt).toLocaleString('de-DE')}\n`);
             const link = document.createElement("a");
             link.href = encodeURI(csvContent);
             link.download = "notizen.csv";
