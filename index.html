@@ -76,7 +76,8 @@
             </form>
     
             <div id="notesContainer" class="space-y-2">
-                </div>
+                <p id="loadingMessage" class="text-center text-slate-400 text-xs italic py-4">Notizen werden geladen...</p>
+            </div>
     
             <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center flex justify-center gap-4">
                 <button id="exportCsvBtn" class="text-slate-400 text-[10px] hover:text-slate-600 transition-colors">CSV Export</button>
@@ -181,18 +182,22 @@
             if (item && !isControl) {
                 const id = item.dataset.id;
                 const old = currentNotes.find(n => n.id === id);
+                
+                // Bearbeitungs-Layout an das Hauptformular angepasst
                 item.innerHTML = `
                     <div class="flex flex-col gap-2 w-full">
-                        <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm shadow-inner" rows="3">${old.text}</textarea>
-                        <select class="edit-priority w-full p-1.5 rounded border border-cyan-500 text-sm bg-white">
-                            <option value="1" ${old.priority === '1' ? 'selected' : ''}>Niedrig</option>
-                            <option value="2" ${old.priority === '2' ? 'selected' : ''}>Mittel</option>
-                            <option value="3" ${old.priority === '3' ? 'selected' : ''}>Hoch</option>
-                        </select>
-                        <div class="flex gap-1 justify-start mt-1">
-                            <button class="delete-btn btn-action bg-red-500 text-white shadow-sm active:scale-95">Löschen</button>
-                            <button class="save-btn btn-action bg-green-600 text-white shadow-sm active:scale-95">Speichern</button>
-                            <button class="cancel-btn btn-action bg-slate-100 text-slate-500 border border-slate-200 active:scale-95">Abbrechen</button>
+                        <textarea class="edit-input w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm" rows="2">${old.text}</textarea>
+                        <div class="flex gap-2 items-center">
+                            <select class="edit-priority h-[32px] flex-1 p-1 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer focus:outline-none focus:border-cyan-500">
+                                <option value="1" ${old.priority === '1' ? 'selected' : ''}>Niedrig</option>
+                                <option value="2" ${old.priority === '2' ? 'selected' : ''}>Mittel</option>
+                                <option value="3" ${old.priority === '3' ? 'selected' : ''}>Hoch</option>
+                            </select>
+                            <div class="flex gap-1">
+                                <button class="save-btn bg-green-600 text-white btn-action shadow-sm hover:bg-green-700 active:scale-95">Speichern</button>
+                                <button class="delete-btn bg-red-500 text-white btn-action shadow-sm hover:bg-red-600 active:scale-95">Löschen</button>
+                                <button class="cancel-btn bg-slate-100 text-slate-500 border border-slate-200 btn-action active:scale-95">Abbrechen</button>
+                            </div>
                         </div>
                     </div>`;
                 item.querySelector('.edit-input').focus();
