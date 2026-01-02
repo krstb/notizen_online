@@ -38,11 +38,11 @@
             overflow: hidden;
         }
 
-        /* Ursprüngliche Button-Größe beibehalten */
+        /* Kompakte Standard-Button-Größe */
         .btn-action {
             font-size: 11px;
             font-weight: 600;
-            padding: 0 10px;
+            padding: 0 12px;
             border-radius: 8px;
             transition: all 0.2s;
             height: 32px;
@@ -51,18 +51,17 @@
             justify-content: center;
         }
 
-        /* Separater Style für den Login Button */
+        /* Login Button - Jetzt dezent und zentriert */
         .btn-login {
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
-            border-radius: 10px;
-            height: 44px;
-            width: 100%;
-            display: flex;
+            padding: 0 20px;
+            border-radius: 8px;
+            height: 32px;
+            display: inline-flex; /* Nicht mehr w-full */
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
 
         .note-item {
@@ -76,7 +75,7 @@
         <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online</h1>
 
         <div id="authPanelTop" class="text-center mb-2">
-            <button id="loginBtn" class="bg-cyan-600 text-white btn-login hidden hover:bg-cyan-700 active:scale-95">
+            <button id="loginBtn" class="bg-cyan-600 text-white btn-login hidden hover:bg-cyan-700 active:scale-95 shadow-sm">
                 Login mit Google
             </button>
         </div>
