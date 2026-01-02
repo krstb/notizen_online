@@ -58,7 +58,7 @@
 <body class="bg-[#e0f7fa] min-h-screen flex flex-col items-center p-2">
 
     <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-4 md:p-5 mt-0.5">
-        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Onlinex</h1>
+        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online</h1>
 
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
@@ -76,7 +76,7 @@
             </form>
     
             <div id="notesContainer" class="space-y-2">
-                <p id="loadingMessage" class="text-center text-slate-400 text-xs">Lade Daten...</p>
+                <p id="loadingMessage" class="text-center text-slate-400 text-xs italic">Keine Notizen vorhanden...</p>
             </div>
     
             <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center flex justify-center gap-4">
@@ -93,7 +93,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js"; // Beachte: Firestore Imports korrigiert falls nötig
+        import { getFirestore as getFirestoreDB, collection as col, addDoc as add, doc as dRef, updateDoc as update, deleteDoc as del, onSnapshot as snap, query as qry, orderBy as order } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
         
         const firebaseConfig = {
              apiKey: "AIzaSyAy_eDSW5Q9KzZFptsTK5DGthk1ed2Objc",
@@ -106,7 +107,7 @@
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        const db = getFirestoreDB(app);
         const provider = new GoogleAuthProvider();
 
         const noteInput = document.getElementById('noteInput');
@@ -132,6 +133,10 @@
 
         const renderNotesUI = (notes) => {
             notesContainer.innerHTML = ''; 
+            if (notes.length === 0) {
+                notesContainer.innerHTML = '<p class="text-center text-slate-400 text-xs italic py-4">Keine Notizen vorhanden...</p>';
+                return;
+            }
             notes.forEach(note => {
                 const el = document.createElement('div');
                 el.className = 'note-item flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition-colors hover:bg-slate-50';
@@ -151,9 +156,9 @@
             currentUserId = user.uid;
             appContent.classList.remove("hidden");
             loginBtn.classList.add("hidden");
-            const q = query(collection(db, `notes/${user.uid}/userNotes`), orderBy("priority", "desc"), orderBy("text", "asc"));
+            const q = qry(col(db, `notes/${user.uid}/userNotes`), order("priority", "desc"), order("createdAt", "desc"));
             if (unsubscribeNotes) unsubscribeNotes();
-            unsubscribeNotes = onSnapshot(q, s => {
+            unsubscribeNotes = snap(q, s => {
                 currentNotes = s.docs.map(d => ({id: d.id, ...d.data()}));
                 renderNotesUI(currentNotes);
             });
@@ -163,7 +168,7 @@
             e.preventDefault();
             const text = noteInput.value.trim();
             if (!text || !currentUserId) return;
-            await addDoc(collection(db, `notes/${currentUserId}/userNotes`), {
+            await add(col(db, `notes/${currentUserId}/userNotes`), {
                 text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
             });
             noteInput.value = '';
@@ -173,10 +178,7 @@
             const item = e.target.closest('.note-item');
             const isControl = e.target.closest('textarea, select, button');
             
-            // Verhindert das Schließen/Neuladen, wenn man auf ein Formular-Element klickt
-            if (isControl && !e.target.closest('.note-item > div')) {
-                 // Klick innerhalb des bereits geöffneten Edit-Bereichs auf ein Steuerelement
-            } else if (item && !isControl) {
+            if (item && !isControl) {
                 const id = item.dataset.id;
                 const old = currentNotes.find(n => n.id === id);
                 item.innerHTML = `
@@ -200,16 +202,17 @@
             const btn = e.target.closest('button');
             if (!btn) return;
             const el = btn.closest('[data-id]');
+            if (!el) return;
             const id = el.dataset.id;
-            const noteRef = doc(db, `notes/${currentUserId}/userNotes/${id}`);
+            const noteRef = dRef(db, `notes/${currentUserId}/userNotes/${id}`);
 
             if (btn.classList.contains('delete-btn')) {
-                if(confirm("Wirklich löschen?")) await deleteDoc(noteRef);
+                if(confirm("Wirklich löschen?")) await del(noteRef);
             } else if (btn.classList.contains('save-btn')) {
                 const newText = el.querySelector('.edit-input').value.trim();
                 const newPrio = el.querySelector('.edit-priority').value;
                 if (newText) {
-                    await updateDoc(noteRef, { text: newText, priority: newPrio });
+                    await update(noteRef, { text: newText, priority: newPrio });
                 } else {
                     renderNotesUI(currentNotes);
                 }
@@ -219,6 +222,7 @@
         };
 
         document.getElementById('exportCsvBtn').onclick = () => {
+            if (currentNotes.length === 0) return;
             let csv = "data:text/csv;charset=utf-8,\uFEFFText,Priorität\n";
             currentNotes.forEach(n => csv += `"${n.text.replace(/"/g, '""')}",${n.priority}\n`);
             const link = document.createElement("a");
