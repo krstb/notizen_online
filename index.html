@@ -12,16 +12,17 @@
         html { background-color: #000000 !important; }
         body { font-family: 'Inter', sans-serif; background-color: #e0f7fa; }
         textarea { resize: none; }
+        /* Erzwingt Umbruch auch bei extrem langen Wörtern ohne Leerzeichen */
+        .force-break {
+            word-break: break-all;
+            overflow-wrap: break-word;
+        }
     </style>
 </head>
 <body class="bg-blue-50 min-h-screen flex flex-col items-center p-2 md:p-8">
 
     <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg p-4 md:p-6 mt-4">
-        <h1 class="text-xl font-bold text-center text-slate-900 mb-4">Notizen-Online3</h1>
-
-        <div id="authPanelTop" class="text-center mb-4">
-            <button id="loginBtn" class="bg-cyan-600 text-white font-semibold py-2 px-6 rounded-lg hidden">Login</button>
-        </div>
+        <h1 class="text-xl font-bold text-center text-slate-900 mb-4">Notizen-Online4</h1>
 
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
@@ -42,10 +43,14 @@
                 <p id="loadingMessage" class="text-center text-slate-400 text-sm">Lade...</p>
             </div>
     
-            <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center">
-                <button id="exportCsvBtn" class="text-slate-400 text-[10px] mr-4 hover:text-slate-600">CSV Export</button>
+            <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center flex justify-center gap-4">
+                <button id="exportCsvBtn" class="text-slate-400 text-[10px] hover:text-slate-600">CSV Export</button>
                 <button id="logoutBtn" class="text-red-300 text-[10px] hover:text-red-500">Abmelden</button>
             </div>
+        </div>
+
+        <div id="authPanelTop" class="text-center">
+            <button id="loginBtn" class="bg-cyan-600 text-white font-semibold py-2 px-6 rounded-lg hidden">Login</button>
         </div>
     </div>
 
@@ -82,17 +87,16 @@
 
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
-        // KORREKTUR: items-start statt items-center & whitespace-pre-wrap gegen Überlaufen
         const createNoteView = (note) => `
-            <div class="flex items-start flex-1 min-w-0 pr-2">
+            <div class="flex flex-1 min-w-0 items-start">
                  <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
-                 <p class="text-slate-700 break-words text-sm leading-snug whitespace-pre-wrap flex-1">${note.text}</p>
+                 <p class="text-slate-700 text-sm leading-snug whitespace-pre-wrap force-break flex-1">${note.text}</p>
             </div>
-            <div class="flex gap-1 flex-shrink-0 mt-0.5">
-                <button class="edit-btn p-1 text-slate-300 hover:text-cyan-600 transition-colors">
+            <div class="flex gap-2 ml-2 flex-shrink-0">
+                <button class="edit-btn p-1 text-slate-300 hover:text-cyan-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" stroke-width="2"/></svg>
                 </button>
-                <button class="delete-btn p-1 text-slate-300 hover:text-red-500 transition-colors">
+                <button class="delete-btn p-1 text-slate-300 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
                 </button>
             </div>
@@ -102,7 +106,7 @@
             notesContainer.innerHTML = ''; 
             notes.forEach(note => {
                 const el = document.createElement('div');
-                el.className = 'flex items-start justify-between p-2.5 bg-white rounded-xl border border-slate-100 shadow-sm';
+                el.className = 'flex items-start justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden';
                 el.dataset.id = note.id; 
                 el.innerHTML = createNoteView(note);
                 notesContainer.appendChild(el);
@@ -150,12 +154,13 @@
                 const old = currentNotes.find(n => n.id === id);
                 el.innerHTML = `
                     <div class="flex flex-col gap-2 w-full">
-                        <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm" rows="3">${old.text}</textarea>
+                        <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm force-break" rows="3">${old.text}</textarea>
                         <div class="flex gap-2 justify-end">
                             <button class="save-btn text-[10px] bg-green-500 text-white px-2 py-1 rounded">Speichern</button>
-                            <button class="cancel-btn text-[10px] bg-slate-100 px-2 py-1 rounded">X</button>
+                            <button class="cancel-btn text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">Abbrechen</button>
                         </div>
                     </div>`;
+                el.querySelector('.edit-input').focus();
             } else if (btn.classList.contains('save-btn')) {
                 const newText = el.querySelector('.edit-input').value.trim();
                 if (newText) await updateDoc(noteRef, { text: newText });
