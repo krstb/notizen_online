@@ -24,12 +24,10 @@
         
         html, body { 
             background-color: #e0f7fa !important;
-            /* Kein overscroll-behavior: none, damit Refresh geht */
         }
         body { font-family: 'Inter', sans-serif; }
         textarea { resize: none; }
         
-        /* Fix für Textumbruch bei langen Zeichenfolgen */
         .note-text-container {
             word-break: break-all;
             overflow-wrap: break-word;
@@ -38,25 +36,34 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+
+        /* Einheitliche Buttongröße für Hinzufügen und Speichern */
+        .btn-standard {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
     </style>
 </head>
 <body class="bg-[#e0f7fa] min-h-screen flex flex-col items-center p-2">
 
     <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-4 md:p-5 mt-1">
-        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online</h1>
+        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online"</h1>
 
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
                 <textarea id="noteInput" placeholder="Neue Notiz..." rows="2"
                        class="w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm"></textarea>
                 
-                <div class="flex gap-2">
+                <div class="flex gap-2 items-center">
                     <select id="priorityInput" class="flex-1 p-2 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer">
                         <option value="1">Niedrig</option>
                         <option value="2">Mittel</option>
                         <option value="3">Hoch</option>
                     </select>
-                    <button type="submit" class="bg-cyan-600 text-white font-medium py-1.5 px-4 rounded-lg text-sm transition-all hover:bg-cyan-700 active:scale-95 shadow-sm">Hinzufügen</button>
+                    <button type="submit" class="bg-cyan-600 text-white btn-standard shadow-sm hover:bg-cyan-700 active:scale-95">Hinzufügen</button>
                 </div>
             </form>
     
@@ -108,7 +115,6 @@
 
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
-        // Buttons farblich hervorgehoben
         const createNoteView = (note) => `
             <div class="flex flex-1 min-w-0 items-start mr-2">
                  <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
@@ -146,7 +152,6 @@
             appContent.classList.remove("hidden");
             loginBtn.classList.add("hidden");
             
-            // Logik wie im Original: Prio absteigend, Text aufsteigend
             const q = query(collection(db, `notes/${user.uid}/userNotes`), orderBy("priority", "desc"), orderBy("text", "asc"));
             
             if (unsubscribeNotes) unsubscribeNotes();
@@ -181,15 +186,19 @@
                     <div class="flex flex-col gap-2 w-full">
                         <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm" rows="3">${old.text}</textarea>
                         <div class="flex gap-2 justify-end">
-                            <button class="save-btn text-[11px] bg-green-600 text-white px-3 py-1.5 rounded font-semibold shadow-sm active:scale-95">Speichern</button>
-                            <button class="cancel-btn text-[11px] bg-slate-100 px-3 py-1.5 rounded text-slate-500 border border-slate-200 active:scale-95">Abbrechen</button>
+                            <button class="save-btn btn-standard bg-green-600 text-white shadow-sm active:scale-95">Speichern</button>
+                            <button class="cancel-btn btn-standard bg-slate-100 text-slate-500 border border-slate-200 active:scale-95">Abbrechen</button>
                         </div>
                     </div>`;
                 el.querySelector('.edit-input').focus();
             } else if (btn.classList.contains('save-btn')) {
                 const newText = el.querySelector('.edit-input').value.trim();
-                if (newText) await updateDoc(noteRef, { text: newText });
-                else renderNotesUI(currentNotes);
+                if (newText) {
+                    await updateDoc(noteRef, { text: newText });
+                    // Ansicht wird durch onSnapshot automatisch aktualisiert
+                } else {
+                    renderNotesUI(currentNotes);
+                }
             } else if (btn.classList.contains('cancel-btn')) {
                 renderNotesUI(currentNotes);
             }
