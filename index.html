@@ -4,11 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Notizen Online</title>
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#e0f7fa">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <script>
+        // Service Worker Registrierung für Offline-Nutzung und Refresh
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fehler:', err));
+            });
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
         html, body { 
             background-color: #e0f7fa !important; 
             overscroll-behavior: none; 
@@ -17,21 +31,21 @@
         body { font-family: 'Inter', sans-serif; }
         textarea { resize: none; }
         
-        /* Sorgt dafür, dass langer Text die Buttons nicht wegdrückt */
-        .note-text {
+        /* Layout-Fix: Verhindert, dass Text die Buttons verdrängt */
+        .note-text-container {
             word-break: break-all;
             overflow-wrap: break-word;
             display: -webkit-box;
-            -webkit-line-clamp: 3; /* Max 3 Zeilen, dann ... */
+            -webkit-line-clamp: 10; /* Erlaubt längere Texte, bevor abgeschnitten wird */
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
     </style>
- head>
+</head>
 <body class="bg-blue-50 min-h-screen flex flex-col items-center p-2 md:p-8">
 
     <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg p-4 md:p-6 mt-4">
-        <h1 class="text-2xl font-bold text-center text-slate-900 mb-4">Notizen-Online7</h1>
+        <h1 class="text-2xl font-bold text-center text-slate-900 mb-4">Notizen-Online</h1>
 
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
@@ -96,11 +110,10 @@
 
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
-        // Geändertes HTML: Flex-Layout sorgt dafür, dass Buttons rechts bleiben
         const createNoteView = (note) => `
             <div class="flex flex-1 min-w-0 items-start mr-2">
                  <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
-                 <p class="text-slate-700 text-sm leading-snug note-text flex-1">${note.text}</p>
+                 <p class="text-slate-700 text-sm leading-snug note-text-container flex-1">${note.text}</p>
             </div>
             <div class="flex gap-2 flex-shrink-0 items-center">
                 <button class="edit-btn p-1 text-slate-500 hover:text-cyan-600 transition-colors">
@@ -134,7 +147,7 @@
             appContent.classList.remove("hidden");
             loginBtn.classList.add("hidden");
             
-            // Sortierung wie im Original
+            // ORIGINAL-LOGIK: priority desc, text asc
             const q = query(collection(db, `notes/${user.uid}/userNotes`), orderBy("priority", "desc"), orderBy("text", "asc"));
             
             if (unsubscribeNotes) unsubscribeNotes();
