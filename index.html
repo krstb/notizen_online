@@ -37,14 +37,13 @@
             overflow: hidden;
         }
 
-        /* Einheitliche Button-Klasse für Hinzufügen und Speichern */
         .btn-action {
             font-size: 11px;
             font-weight: 600;
-            padding: 0 14px;
+            padding: 0 12px;
             border-radius: 8px;
             transition: all 0.2s;
-            height: 36px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -54,7 +53,7 @@
 <body class="bg-[#e0f7fa] min-h-screen flex flex-col items-center p-2">
 
     <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-4 md:p-5 mt-0.5">
-        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online x</h1>
+        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online</h1>
 
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
@@ -62,7 +61,7 @@
                        class="w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm"></textarea>
                 
                 <div class="flex gap-2 items-center">
-                    <select id="priorityInput" class="flex-1 h-[36px] p-2 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer">
+                    <select id="priorityInput" class="flex-1 h-[34px] p-1.5 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer">
                         <option value="1">Niedrig</option>
                         <option value="2">Mittel</option>
                         <option value="3">Hoch</option>
@@ -120,11 +119,11 @@
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
         const createNoteView = (note) => `
-            <div class="flex flex-1 min-w-0 items-start mr-2">
-                 <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
+            <div class="flex flex-1 min-w-0 items-start mr-1">
+                 <span class="w-2.5 h-2.5 rounded-full mr-2.5 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
                  <p class="text-slate-700 text-sm leading-snug note-text-container flex-1">${note.text}</p>
             </div>
-            <div class="flex gap-1.5 flex-shrink-0 items-center">
+            <div class="flex gap-0.5 flex-shrink-0 items-center">
                 <button class="edit-btn p-1 text-cyan-600 hover:text-cyan-800 transition-transform active:scale-125">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" /></svg>
                 </button>
@@ -187,7 +186,12 @@
                 el.innerHTML = `
                     <div class="flex flex-col gap-2 w-full">
                         <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm shadow-inner" rows="3">${old.text}</textarea>
-                        <div class="flex gap-1.5 justify-end">
+                        <select class="edit-priority w-full p-1.5 rounded border border-cyan-500 text-sm bg-white">
+                            <option value="1" ${old.priority === '1' ? 'selected' : ''}>Niedrig</option>
+                            <option value="2" ${old.priority === '2' ? 'selected' : ''}>Mittel</option>
+                            <option value="3" ${old.priority === '3' ? 'selected' : ''}>Hoch</option>
+                        </select>
+                        <div class="flex gap-1 justify-end">
                             <button class="save-btn btn-action bg-green-600 text-white shadow-sm active:scale-95">Speichern</button>
                             <button class="cancel-btn btn-action bg-slate-100 text-slate-500 border border-slate-200 active:scale-95">Abbrechen</button>
                         </div>
@@ -195,9 +199,9 @@
                 el.querySelector('.edit-input').focus();
             } else if (btn.classList.contains('save-btn')) {
                 const newText = el.querySelector('.edit-input').value.trim();
+                const newPrio = el.querySelector('.edit-priority').value;
                 if (newText) {
-                    await updateDoc(noteRef, { text: newText });
-                    // Die Ansicht wird durch den onSnapshot-Listener automatisch zurückgesetzt
+                    await updateDoc(noteRef, { text: newText, priority: newPrio });
                 } else {
                     renderNotesUI(currentNotes);
                 }
