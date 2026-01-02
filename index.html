@@ -54,7 +54,6 @@
             animation: pulse-danger 0.5s ease-in-out;
         }
 
-        /* Ermöglicht Zeilenumbrüche in der Textarea */
         textarea {
             resize: none;
         }
@@ -151,13 +150,13 @@
         const priorityText = { '3': 'Hoch', '2': 'Mittel', '1': 'Niedrig' };
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
-        // whitespace-pre-wrap hinzugefügt für korrekte Zeilenumbrüche in der Ansicht
+        // KORRIGIERTE ANSICHT: items-start für korrektes vertikales Alignment
         const createNoteView = (note) => `
-            <div class="flex items-start flex-1 min-w-0">
-                 <span class="w-3 h-3 rounded-full mr-4 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
-                 <p class="text-slate-800 break-words text-base leading-snug whitespace-pre-wrap">${note.text}</p>
+            <div class="flex items-start flex-1 min-w-0 mr-2">
+                 <span class="w-3 h-3 rounded-full mr-4 mt-2 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
+                 <p class="text-slate-800 break-words text-base leading-relaxed whitespace-pre-wrap flex-1">${note.text}</p>
             </div>
-            <div class="flex items-center gap-2 ml-4">
+            <div class="flex items-center gap-1 flex-shrink-0">
                 <button class="edit-btn p-2 text-cyan-500 hover:text-cyan-700 transition-colors duration-200 transform hover:scale-110 active:scale-95" aria-label="Notiz bearbeiten">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" /></svg>
                 </button>
@@ -177,7 +176,8 @@
 
             notes.forEach(note => {
                 const noteElement = document.createElement('div');
-                noteElement.className = 'note-item flex items-start justify-between p-4 bg-white rounded-xl shadow-lg border border-slate-200 transition-all duration-300 transform hover:scale-[1.01] hover:shadow-xl';
+                // flex-row und items-start sorgen dafür, dass Icons und Text nebeneinander bleiben
+                noteElement.className = 'note-item flex flex-row items-start justify-between p-4 bg-white rounded-xl shadow-lg border border-slate-200 transition-all duration-300 transform hover:scale-[1.01] hover:shadow-xl';
                 noteElement.dataset.id = note.id; 
                 noteElement.innerHTML = createNoteView(note);
                 notesContainer.appendChild(noteElement);
@@ -271,7 +271,7 @@
                             <option value="3" ${originalNote.priority === '3' ? 'selected' : ''}>Hoch</option>
                         </select>
                         <div class="flex items-center gap-2 mt-2">
-                            <button class="save-btn py-2 px-4 rounded-md text-white font-semibold bg-green-500 hover:bg-green-600 transition-colors duration-200 flex items-center gap-1">Speichern</button>
+                            <button class="save-btn py-2 px-4 rounded-md text-white font-semibold bg-green-500 hover:bg-green-600 transition-colors duration-200">Speichern</button>
                             <button class="cancel-action-btn py-2 px-4 rounded-md text-slate-700 font-semibold bg-gray-200 hover:bg-gray-300 transition-colors duration-200">Abbrechen</button>
                         </div>
                     </div>`;
