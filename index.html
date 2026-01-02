@@ -25,7 +25,7 @@
 <body class="bg-blue-50 min-h-screen flex flex-col items-center p-2 md:p-8">
 
     <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg p-4 md:p-6 mt-4">
-        <h1 class="text-xl font-bold text-center text-slate-900 mb-4">Notizen-Online5</h1>
+        <h1 class="text-xl font-bold text-center text-slate-900 mb-4">Notizen-Online</h1>
 
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
@@ -38,7 +38,7 @@
                         <option value="2">Mittel</option>
                         <option value="3">Hoch</option>
                     </select>
-                    <button type="submit" class="bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Hinzufügen</button>
+                    <button type="submit" class="bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors hover:bg-cyan-700">Hinzufügen</button>
                 </div>
             </form>
     
@@ -47,8 +47,8 @@
             </div>
     
             <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center flex justify-center gap-4">
-                <button id="exportCsvBtn" class="text-slate-400 text-[10px] hover:text-slate-600">CSV Export</button>
-                <button id="logoutBtn" class="text-red-300 text-[10px] hover:text-red-500">Abmelden</button>
+                <button id="exportCsvBtn" class="text-slate-500 text-[10px] hover:text-slate-800 transition-colors">CSV Export</button>
+                <button id="logoutBtn" class="text-red-400 text-[10px] hover:text-red-600 transition-colors">Abmelden</button>
             </div>
         </div>
 
@@ -90,18 +90,17 @@
 
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
-        // Ursprüngliche Ansicht: Buttons rechts fixiert
         const createNoteView = (note) => `
             <div class="flex flex-1 min-w-0 items-start">
                  <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
                  <p class="text-slate-700 text-sm leading-snug whitespace-pre-wrap force-break flex-1">${note.text}</p>
             </div>
             <div class="flex gap-2 ml-2 flex-shrink-0">
-                <button class="edit-btn p-1 text-slate-300 hover:text-cyan-600 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" stroke-width="2"/></svg>
+                <button class="edit-btn p-1 text-slate-500 hover:text-cyan-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" stroke-width="2"/></svg>
                 </button>
-                <button class="delete-btn p-1 text-slate-300 hover:text-red-500 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
+                <button class="delete-btn p-1 text-slate-500 hover:text-red-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
                 </button>
             </div>
         `;
@@ -121,17 +120,26 @@
             if (!user) {
                 appContent.classList.add("hidden");
                 loginBtn.classList.remove("hidden");
+                if (unsubscribeNotes) unsubscribeNotes();
                 return;
             }
             currentUserId = user.uid;
             appContent.classList.remove("hidden");
             loginBtn.classList.add("hidden");
             
-            const q = query(collection(db, `notes/${user.uid}/userNotes`), orderBy("priority", "desc"), orderBy("createdAt", "desc"));
+            // WIEDERHERGESTELLT: Sortierung nach Priorität und Erstellungsdatum
+            const q = query(
+                collection(db, `notes/${user.uid}/userNotes`), 
+                orderBy("priority", "desc"), 
+                orderBy("createdAt", "desc")
+            );
+
             if (unsubscribeNotes) unsubscribeNotes();
             unsubscribeNotes = onSnapshot(q, s => {
                 currentNotes = s.docs.map(d => ({id: d.id, ...d.data()}));
                 renderNotesUI(currentNotes);
+            }, (error) => {
+                console.error("Firestore Fehler:", error);
             });
         });
 
@@ -140,7 +148,9 @@
             const text = noteInput.value.trim();
             if (!text || !currentUserId) return;
             await addDoc(collection(db, `notes/${currentUserId}/userNotes`), {
-                text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
+                text, 
+                priority: document.getElementById('priorityInput').value, 
+                createdAt: serverTimestamp()
             });
             noteInput.value = '';
         };
@@ -160,8 +170,8 @@
                     <div class="flex flex-col gap-2 w-full">
                         <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm force-break" rows="3">${old.text}</textarea>
                         <div class="flex gap-2 justify-end">
-                            <button class="save-btn text-[11px] bg-green-500 text-white px-3 py-1.5 rounded font-semibold">Speichern</button>
-                            <button class="cancel-btn text-[11px] bg-slate-100 px-3 py-1.5 rounded text-slate-500">Abbrechen</button>
+                            <button class="save-btn text-[11px] bg-green-600 text-white px-3 py-1.5 rounded font-semibold shadow-sm">Speichern</button>
+                            <button class="cancel-btn text-[11px] bg-slate-100 px-3 py-1.5 rounded text-slate-600 border border-slate-200">Abbrechen</button>
                         </div>
                     </div>`;
                 el.querySelector('.edit-input').focus();
@@ -169,19 +179,21 @@
                 const newText = el.querySelector('.edit-input').value.trim();
                 if (newText) {
                     await updateDoc(noteRef, { text: newText });
-                    // renderNotesUI wird automatisch durch onSnapshot getriggert
                 } else {
                     renderNotesUI(currentNotes);
                 }
             } else if (btn.classList.contains('cancel-btn')) {
-                renderNotesUI(currentNotes); // Zurück zur ursprünglichen Ansicht
+                renderNotesUI(currentNotes);
             }
         };
 
         document.getElementById('exportCsvBtn').onclick = () => {
             if (currentNotes.length === 0) return;
             let csv = "data:text/csv;charset=utf-8,\uFEFFText,Priorität\n";
-            currentNotes.forEach(n => csv += `"${n.text.replace(/"/g, '""')}",${n.priority}\n`);
+            currentNotes.forEach(n => {
+                const pText = n.priority === '3' ? 'Hoch' : n.priority === '2' ? 'Mittel' : 'Niedrig';
+                csv += `"${n.text.replace(/"/g, '""')}",${pText}\n`;
+            });
             const link = document.createElement("a");
             link.href = encodeURI(csv);
             link.download = "notizen.csv";
