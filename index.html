@@ -4,16 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notizen Online</title>
-
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
-    <meta name="color-scheme" content="light">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         html { background-color: #000000 !important; }
@@ -24,15 +17,14 @@
 <body class="bg-blue-50 min-h-screen flex flex-col items-center p-2 md:p-8">
 
     <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg p-4 md:p-6 mt-4">
-
-        <h1 class="text-2xl font-bold text-center text-slate-900 mb-4">Notizen-Online v1</h1>
+        <h1 class="text-xl font-bold text-center text-slate-900 mb-4">Notizen-Online3</h1>
 
         <div id="authPanelTop" class="text-center mb-4">
-            <button id="loginBtn" class="bg-cyan-600 text-white font-semibold py-2 px-6 rounded-lg hidden">Mit Google anmelden</button>
+            <button id="loginBtn" class="bg-cyan-600 text-white font-semibold py-2 px-6 rounded-lg hidden">Login</button>
         </div>
 
         <div id="appContent" class="hidden">
-            <form id="noteForm" class="flex flex-col gap-2 mb-6">
+            <form id="noteForm" class="flex flex-col gap-2 mb-4">
                 <textarea id="noteInput" placeholder="Neue Notiz..." rows="2"
                        class="w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm"></textarea>
                 
@@ -42,7 +34,7 @@
                         <option value="2">Mittel</option>
                         <option value="3">Hoch</option>
                     </select>
-                    <button type="submit" class="bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg text-sm hover:bg-cyan-700">Hinzufügen</button>
+                    <button type="submit" class="bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Hinzufügen</button>
                 </div>
             </form>
     
@@ -50,11 +42,9 @@
                 <p id="loadingMessage" class="text-center text-slate-400 text-sm">Lade...</p>
             </div>
     
-            <button id="exportCsvBtn" class="w-full text-slate-400 text-xs py-2 mt-6 border-t border-slate-100 hover:text-slate-600 transition-colors">Notizen als CSV exportieren</button>
-            
-            <div id="authFooter" class="mt-4 pt-2 text-center">
-                <p id="authStatus" class="text-slate-500 text-[10px] mb-2"></p>
-                <button id="logoutBtn" class="text-red-400 text-xs hover:underline">Abmelden</button>
+            <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center">
+                <button id="exportCsvBtn" class="text-slate-400 text-[10px] mr-4 hover:text-slate-600">CSV Export</button>
+                <button id="logoutBtn" class="text-red-300 text-[10px] hover:text-red-500">Abmelden</button>
             </div>
         </div>
     </div>
@@ -82,7 +72,6 @@
         const notesContainer = document.getElementById('notesContainer');
         const appContent = document.getElementById('appContent');
         const loginBtn = document.getElementById('loginBtn');
-        const authStatus = document.getElementById('authStatus');
 
         let currentUserId = null;
         let currentNotes = [];
@@ -93,16 +82,17 @@
 
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
+        // KORREKTUR: items-start statt items-center & whitespace-pre-wrap gegen Überlaufen
         const createNoteView = (note) => `
             <div class="flex items-start flex-1 min-w-0 pr-2">
-                 <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
+                 <span class="w-2.5 h-2.5 rounded-full mr-3 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
                  <p class="text-slate-700 break-words text-sm leading-snug whitespace-pre-wrap flex-1">${note.text}</p>
             </div>
-            <div class="flex gap-1 flex-shrink-0">
-                <button class="edit-btn p-1 text-slate-400 hover:text-cyan-600 transition-colors">
+            <div class="flex gap-1 flex-shrink-0 mt-0.5">
+                <button class="edit-btn p-1 text-slate-300 hover:text-cyan-600 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z" stroke-width="2"/></svg>
                 </button>
-                <button class="delete-btn p-1 text-slate-400 hover:text-red-500 transition-colors">
+                <button class="delete-btn p-1 text-slate-300 hover:text-red-500 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
                 </button>
             </div>
@@ -110,13 +100,9 @@
 
         const renderNotesUI = (notes) => {
             notesContainer.innerHTML = ''; 
-            if (notes.length === 0) {
-                notesContainer.innerHTML = '<p class="text-center text-slate-400 text-xs">Keine Notizen vorhanden.</p>';
-                return;
-            }
             notes.forEach(note => {
                 const el = document.createElement('div');
-                el.className = 'flex items-start justify-between p-2.5 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow';
+                el.className = 'flex items-start justify-between p-2.5 bg-white rounded-xl border border-slate-100 shadow-sm';
                 el.dataset.id = note.id; 
                 el.innerHTML = createNoteView(note);
                 notesContainer.appendChild(el);
@@ -127,11 +113,9 @@
             if (!user) {
                 appContent.classList.add("hidden");
                 loginBtn.classList.remove("hidden");
-                if (unsubscribeNotes) unsubscribeNotes();
                 return;
             }
             currentUserId = user.uid;
-            authStatus.textContent = `Angemeldet als ${user.email}`;
             appContent.classList.remove("hidden");
             loginBtn.classList.add("hidden");
             
@@ -151,7 +135,6 @@
                 text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
             });
             noteInput.value = '';
-            noteInput.focus();
         };
 
         notesContainer.onclick = async (e) => {
@@ -162,15 +145,15 @@
             const noteRef = doc(db, `notes/${currentUserId}/userNotes/${id}`);
 
             if (btn.classList.contains('delete-btn')) {
-                if(confirm("Notiz löschen?")) await deleteDoc(noteRef);
+                if(confirm("Löschen?")) await deleteDoc(noteRef);
             } else if (btn.classList.contains('edit-btn')) {
                 const old = currentNotes.find(n => n.id === id);
                 el.innerHTML = `
                     <div class="flex flex-col gap-2 w-full">
                         <textarea class="edit-input w-full p-2 rounded border border-cyan-500 text-sm" rows="3">${old.text}</textarea>
                         <div class="flex gap-2 justify-end">
-                            <button class="save-btn text-xs bg-green-500 text-white px-3 py-1 rounded">Speichern</button>
-                            <button class="cancel-btn text-xs bg-slate-200 px-3 py-1 rounded">Abbrechen</button>
+                            <button class="save-btn text-[10px] bg-green-500 text-white px-2 py-1 rounded">Speichern</button>
+                            <button class="cancel-btn text-[10px] bg-slate-100 px-2 py-1 rounded">X</button>
                         </div>
                     </div>`;
             } else if (btn.classList.contains('save-btn')) {
@@ -183,7 +166,6 @@
         };
 
         document.getElementById('exportCsvBtn').onclick = () => {
-            if (currentNotes.length === 0) return;
             let csv = "data:text/csv;charset=utf-8,\uFEFFText,Priorität\n";
             currentNotes.forEach(n => csv += `"${n.text.replace(/"/g, '""')}",${n.priority}\n`);
             const link = document.createElement("a");
