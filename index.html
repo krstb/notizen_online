@@ -19,22 +19,23 @@
     </script>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Fix für PWA-Ränder und den blauen Balken */
+        <style>
+        /* 1. Fix für PWA-Ränder: Das äußerste Element bleibt schwarz */
         html {
             background-color: #000000 !important;
         }
         
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        textarea { 
-    resize: none !important; 
-}
-        html, body { 
+        /* 2. Nur der sichtbare Hintergrund der App wird hellblau */
+        body { 
+            font-family: 'Inter', sans-serif; 
             background-color: #e0f7fa !important;
         }
-        body { font-family: 'Inter', sans-serif; }
-        textarea { resize: none; }
+
+        textarea { 
+            resize: none !important; 
+        }
         
         .note-text-container {
             overflow-wrap: anywhere;
@@ -66,7 +67,7 @@
             padding: 0 20px;
             border-radius: 8px;
             height: 32px;
-            display: inline-flex; /* Nicht mehr w-full */
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
@@ -76,11 +77,12 @@
             cursor: pointer;
         }
     </style>
+
 </head>
 <body class="bg-[#e0f7fa] min-h-screen flex flex-col items-center p-2">
 
     <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-4 md:p-5 mt-0.5">
-        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online1</h1>
+        <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen-Online2</h1>
 
         <div id="authPanelTop" class="text-center mb-2">
             <button id="loginBtn" class="bg-cyan-600 text-white btn-login hidden hover:bg-cyan-700 active:scale-95 shadow-sm">
