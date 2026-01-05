@@ -2,6 +2,8 @@ const CACHE_NAME = 'Notizen Online'; // Ändere v2 zu v3, v4 etc., um Updates zu
 const ASSETS = [
   'index.html',
   'manifest.json'
+  'icon-192.png'
+  'icon-512.png'
 ];
 
 // Installation: Dateien in den Cache laden
