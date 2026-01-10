@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ton-v5'; 
+const CACHE_NAME = 'notizen_online-v1'; 
 const ASSETS = [
   'index.html',
   'manifest.json',
