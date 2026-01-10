@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notizen_online'; // Ändere v2 zu v3, v4 etc., um Updates zu erzwingen
+const CACHE_NAME = 'ton-v5'; 
 const ASSETS = [
   'index.html',
   'manifest.json',
@@ -6,18 +6,15 @@ const ASSETS = [
   'icon-512.png'
 ];
 
-// Installation: Dateien in den Cache laden
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
     })
   );
-  // Aktiviert den neuen Service Worker sofort, ohne auf das Schließen der App zu warten
   self.skipWaiting();
 });
 
-// Aktivierung: Alten Cache löschen, wenn die Version (CACHE_NAME) geändert wurde
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -33,12 +30,38 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Strategie: Network-First
-// Versucht erst das Netzwerk, bei Fehler (Offline) wird der Cache genutzt
+// Strategie: Hybrid mit Timeout für HTML
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      // Timeout-Logik: Netzwerkversuch vs. 3-Sekunden-Timer
+      Promise.race([
+        fetch(event.request).then((networkResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 3000)
+        )
+      ]).catch(() => caches.match(event.request)) // Bei Timeout oder Offline: Cache
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate für alle anderen Assets (Bilder, JS, CSS)
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+        return cachedResponse || fetchPromise;
+      });
     })
   );
 });
