@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notizen_online-v2'; 
+const CACHE_NAME = 'notizen_online-v3'; 
 const ASSETS = [
   'index.html',
   'manifest.json',
