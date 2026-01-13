@@ -2,7 +2,7 @@
   "short_name": "Notizen Online",
   "name": "Notizen Online",
   "description": "Sichere Notizen mit Firebase",
-  "start_url": "./?source=pwa"
+  "start_url": "index.html",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#000000",
