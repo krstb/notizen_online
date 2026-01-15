@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notizen_online-v5'; 
+const CACHE_NAME = 'notizen_online-v6'; 
 
 const ASSETS = [
   'index.html',
@@ -33,16 +33,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// FETCH (⭐ NUR EINMAL ⭐)
+// FETCH (🔥 NUR EINER 🔥)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 🚫 Firestore komplett ignorieren
+  // 🚫 Firestore niemals anfassen
   if (url.origin === 'https://firestore.googleapis.com') {
     return;
   }
 
-  // 🌐 HTML-Navigation: Network-first mit Timeout
+  // 🌐 HTML: Network-first mit Timeout
   if (event.request.mode === 'navigate') {
     event.respondWith(
       Promise.race([
@@ -64,12 +64,5 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
       cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
-        return cachedResponse || fetchPromise;
-      })
-    )
-  );
-});
+        const fet
+
