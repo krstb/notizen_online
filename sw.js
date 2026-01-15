@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notizen_online-v5'; 
+const CACHE_NAME = 'notizen_online-v7'; 
 
 const ASSETS = [
   'index.html',
