@@ -7,6 +7,20 @@ const ASSETS = [
   'favicon.svg'
 ];
 
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // 🚫 Firestore niemals über Service Worker laufen lassen
+  if (url.origin === 'https://firestore.googleapis.com') {
+    return; // direkt ans Netzwerk, kein respondWith!
+  }
+
+  // --- REST DEINES CODES ---
+
+
+
+
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
