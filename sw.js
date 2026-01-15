@@ -1,4 +1,4 @@
-const CACHE_NAME = 'notizen_online-v6'; 
+const CACHE_NAME = 'notizen_online-v5'; 
 
 const ASSETS = [
   'index.html',
@@ -23,7 +23,6 @@ self.addEventListener('activate', (event) => {
       Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
-            console.log('Lösche alten Cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -33,25 +32,25 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// FETCH (🔥 NUR EINER 🔥)
+// FETCH (NUR EINMAL)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 🚫 Firestore niemals anfassen
+  // 🚫 Firestore komplett umgehen
   if (url.origin === 'https://firestore.googleapis.com') {
     return;
   }
 
-  // 🌐 HTML: Network-first mit Timeout
+  // 🌐 Navigation: Network-first mit Timeout
   if (event.request.mode === 'navigate') {
     event.respondWith(
       Promise.race([
-        fetch(event.request).then((networkResponse) => {
-          return caches.open(CACHE_NAME).then((cache) => {
+        fetch(event.request).then((networkResponse) =>
+          caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, networkResponse.clone());
             return networkResponse;
-          });
-        }),
+          })
+        ),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 3000)
         )
@@ -64,5 +63,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
       cache.match(event.request).then((cachedResponse) => {
-        const fet
-
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+        return cachedResponse || fetchPromise;
+      })
+    )
+  );
+});
