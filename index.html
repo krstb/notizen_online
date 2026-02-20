@@ -128,12 +128,13 @@ html {overscroll-behavior-y: none; }
     </div>
 
     <script type="module">
+    <script src="config.js"></script>
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
         
         const firebaseConfig = {
-             apiKey: "AIzaSyAy_eDSW5Q9KzZFptsTK5DGthk1ed2Objc",
+             apiKey: CONFIG.apiKey,
              authDomain: "notizentest-1bcdc.firebaseapp.com",
              projectId: "notizentest-1bcdc",
              storageBucket: "notizentest-1bcdc.firebasestorage.app",
