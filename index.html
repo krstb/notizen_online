@@ -25,17 +25,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         html {background-color: #000000 !important;overscroll-behavior-y: none;}
-    </style>    
-    
-    <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        textarea { 
-            resize: none !important; 
-        }
-        html, body { 
-            background-color: #e0f7fa !important;
-        }
+        textarea { resize: none !important; }
+        html, body { background-color: #e0f7fa !important; }
         body { font-family: 'Inter', sans-serif; }
         
         .note-text-container {
@@ -48,47 +40,12 @@
             overflow: hidden;
         }
 
-        .btn-action {
-            font-size: 11px;
-            font-weight: 600;
-            padding: 0 12px;
-            border-radius: 8px;
-            transition: all 0.2s;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn-login {
-            font-size: 11px;
-            font-weight: 600;
-            padding: 0 20px;
-            border-radius: 8px;
-            height: 32px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .note-item {
-            cursor: pointer;
-        }
-
-        /* Punkt 2: UI-Stabilisierung */
-        #notesContainer {
-            min-height: 50px;
-        }
-
-        #appContent:not(.hidden) {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        .btn-action { font-size: 11px; font-weight: 600; padding: 0 12px; border-radius: 8px; transition: all 0.2s; height: 32px; display: flex; align-items: center; justify-content: center; }
+        .btn-login { font-size: 11px; font-weight: 600; padding: 0 20px; border-radius: 8px; height: 32px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .note-item { cursor: pointer; }
+        #notesContainer { min-height: 50px; }
+        #appContent:not(.hidden) { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-[#e0f7fa] min-h-screen flex flex-col items-center p-4">
@@ -105,7 +62,7 @@
         <div id="appContent" class="hidden">
             <form id="noteForm" class="flex flex-col gap-2 mb-4">
                 <textarea id="noteInput" placeholder="Neue Notiz..." rows="2"
-                       class="w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm"></textarea>
+                          class="w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm"></textarea>
                 
                 <div class="flex gap-2 items-center">
                     <select id="priorityInput" class="flex-1 h-[32px] p-1 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer focus:outline-none">
@@ -118,7 +75,7 @@
             </form>
     
             <div id="notesContainer" class="space-y-2">
-                <p id="loadingMessage" class="text-center text-slate-400 text-xs italic py-2">Lade Daten...</p>
+                <p id="loadingMessage" class="text-center text-slate-400 text-xs italic py-2">Initialisiere...</p>
             </div>
     
             <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center flex justify-center gap-4">
@@ -133,53 +90,27 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
         
-        // 1. Funktion zum Abrufen des Keys von deiner "Brücke" (Cloud Function)
-async function getSecureApiKey() {
-    try {
-        const response = await fetch('https://DEINE_REGION-DEIN_PROJEKT.cloudfunctions.net/getApiKey');
-        const data = await response.json();
-        return data.apiKey; // Liefert den Key aus dem Secret Manager
-    } catch (error) {
-        console.error("Sicherheits-Check fehlgeschlagen:", error);
-        return null;
-    }
-}
-
-// 2. Initialisierung anpassen
-async function initializeAppSecurely() {
-    const key = await getSecureApiKey();
-    
-    const firebaseConfig = {
-        apiKey: key, // Dynamisch geladen
-        authDomain: "kalender-91d50.firebaseapp.com",
-        projectId: "kalender-91d50",
-        storageBucket: "kalender-91d50.appspot.com",
-        messagingSenderId: "774945115160",
-        appId: "1:774945115160:web:95f..."
-    };
-
-    // Firebase mit der sicheren Config starten
-    const app = initializeApp(firebaseConfig);
-    console.log("Firebase sicher initialisiert.");
-}
-
-initializeAppSecurely();
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        let auth, db, currentUserId = null, currentNotes = [], unsubscribeNotes = null;
         const provider = new GoogleAuthProvider();
+        const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
         const noteInput = document.getElementById('noteInput');
         const notesContainer = document.getElementById('notesContainer');
         const appContent = document.getElementById('appContent');
         const loginBtn = document.getElementById('loginBtn');
 
-        let currentUserId = null;
-        let currentNotes = [];
-        let unsubscribeNotes = null;
-
-        const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
+        // Funktion zum Abrufen des Keys
+        async function getSecureApiKey() {
+            try {
+                // WICHTIG: Ersetze diese URL durch deine echte Cloud Function URL!
+                const response = await fetch('https://europe-west3-kalender-91d50.cloudfunctions.net/getApiKey');
+                const data = await response.json();
+                return data.apiKey;
+            } catch (error) {
+                console.error("Sicherheits-Check fehlgeschlagen:", error);
+                return null;
+            }
+        }
 
         const renderNotesUI = (notes) => {
             notesContainer.innerHTML = ''; 
@@ -200,7 +131,115 @@ initializeAppSecurely();
             });
         };
 
-        // Punkt 1: Sofortiges Laden aus dem Cache
+        async function startApp() {
+            const key = await getSecureApiKey();
+            if (!key) { alert("Sicherheitsfehler: API-Key konnte nicht geladen werden."); return; }
+
+            const firebaseConfig = {
+                apiKey: key, 
+                authDomain: "kalender-91d50.firebaseapp.com",
+                projectId: "kalender-91d50",
+                storageBucket: "kalender-91d50.appspot.com",
+                messagingSenderId: "774945115160",
+                appId: "1:774945115160:web:95f..."
+            };
+
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // Auth Logik
+            onAuthStateChanged(auth, user => {
+                if (!user) {
+                    appContent.classList.add("hidden");
+                    loginBtn.classList.remove("hidden");
+                    if (unsubscribeNotes) unsubscribeNotes();
+                    return;
+                }
+                currentUserId = user.uid;
+                appContent.classList.remove("hidden");
+                loginBtn.classList.add("hidden");
+                
+                const q = query(collection(db, `notes/${user.uid}/userNotes`), orderBy("priority", "desc"), orderBy("text", "asc"));
+                if (unsubscribeNotes) unsubscribeNotes();
+                unsubscribeNotes = onSnapshot(q, s => {
+                    currentNotes = s.docs.map(d => ({id: d.id, ...d.data()}));
+                    localStorage.setItem('notes_cache', JSON.stringify(currentNotes));
+                    renderNotesUI(currentNotes);
+                });
+            });
+
+            // Listener setzen
+            loginBtn.onclick = () => signInWithPopup(auth, provider);
+            document.getElementById('logoutBtn').onclick = () => {
+                localStorage.removeItem('notes_cache');
+                signOut(auth).then(() => location.reload());
+            };
+            document.getElementById('noteForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const text = noteInput.value.trim();
+                if (!text || !currentUserId) return;
+                await addDoc(collection(db, `notes/${currentUserId}/userNotes`), {
+                    text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
+                });
+                noteInput.value = '';
+            };
+            notesContainer.onclick = async (e) => {
+                const item = e.target.closest('.note-item');
+                const isControl = e.target.closest('textarea, select, button');
+                if (item && !isControl) {
+                    const id = item.dataset.id;
+                    const old = currentNotes.find(n => n.id === id);
+                    item.innerHTML = `
+                        <div class="flex flex-col gap-2 w-full">
+                            <textarea class="edit-input w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm" rows="2">${old.text}</textarea>
+                            <div class="flex gap-1 justify-start items-center">
+                                <select class="edit-priority h-[32px] w-24 p-1 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer focus:outline-none">
+                                    <option value="1" ${old.priority === '1' ? 'selected' : ''}>Niedrig</option>
+                                    <option value="2" ${old.priority === '2' ? 'selected' : ''}>Mittel</option>
+                                    <option value="3" ${old.priority === '3' ? 'selected' : ''}>Hoch</option>
+                                </select>
+                                <button class="save-btn bg-green-600 text-white btn-action shadow-sm active:scale-95">Speichern</button>
+                                <button class="delete-btn bg-red-500 text-white btn-action shadow-sm active:scale-95">Löschen</button>
+                                <button class="cancel-btn bg-slate-100 text-slate-500 border border-slate-200 btn-action active:scale-95">Abbrechen</button>
+                            </div>
+                        </div>`;
+                    item.querySelector('.edit-input').focus();
+                    return;
+                }
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const el = btn.closest('[data-id]');
+                if (!el) return;
+                const id = el.dataset.id;
+                const noteRef = doc(db, `notes/${currentUserId}/userNotes/${id}`);
+
+                if (btn.classList.contains('delete-btn')) {
+                    if(confirm("Wirklich löschen?")) await deleteDoc(noteRef);
+                } else if (btn.classList.contains('save-btn')) {
+                    const newText = el.querySelector('.edit-input').value.trim();
+                    const newPrio = el.querySelector('.edit-priority').value;
+                    if (newText) {
+                        await updateDoc(noteRef, { text: newText, priority: newPrio });
+                    } else {
+                        renderNotesUI(currentNotes);
+                    }
+                } else if (btn.classList.contains('cancel-btn')) {
+                    renderNotesUI(currentNotes);
+                }
+            };
+            document.getElementById('exportCsvBtn').onclick = () => {
+                if (currentNotes.length === 0) return;
+                let csv = "data:text/csv;charset=utf-8,\uFEFFText,Priorität\n";
+                currentNotes.forEach(n => csv += `"${n.text.replace(/"/g, '""')}",${n.priority}\n`);
+                const link = document.createElement("a");
+                link.href = encodeURI(csv);
+                link.download = "notizen.csv";
+                link.click();
+            };
+        }
+
+        // Cache laden, dann App starten
         const cachedData = localStorage.getItem('notes_cache');
         if (cachedData) {
             try {
@@ -209,103 +248,7 @@ initializeAppSecurely();
                 renderNotesUI(currentNotes);
             } catch (e) { console.error("Cache-Fehler", e); }
         }
-
-        loginBtn.onclick = () => signInWithPopup(auth, provider);
-        
-        // Punkt 3: Sicherer Logout mit Cache-Löschung
-        document.getElementById('logoutBtn').onclick = () => {
-            localStorage.removeItem('notes_cache');
-            signOut(auth).then(() => location.reload());
-        };
-
-        onAuthStateChanged(auth, user => {
-            if (!user) {
-                appContent.classList.add("hidden");
-                loginBtn.classList.remove("hidden");
-                if (unsubscribeNotes) unsubscribeNotes();
-                return;
-            }
-            currentUserId = user.uid;
-            appContent.classList.remove("hidden");
-            loginBtn.classList.add("hidden");
-            
-            const q = query(collection(db, `notes/${user.uid}/userNotes`), orderBy("priority", "desc"), orderBy("text", "asc"));
-            
-            if (unsubscribeNotes) unsubscribeNotes();
-            unsubscribeNotes = onSnapshot(q, s => {
-                currentNotes = s.docs.map(d => ({id: d.id, ...d.data()}));
-                // Punkt 1: Cache aktualisieren
-                localStorage.setItem('notes_cache', JSON.stringify(currentNotes));
-                renderNotesUI(currentNotes);
-            });
-        });
-
-        document.getElementById('noteForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const text = noteInput.value.trim();
-            if (!text || !currentUserId) return;
-            await addDoc(collection(db, `notes/${currentUserId}/userNotes`), {
-                text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
-            });
-            noteInput.value = '';
-        };
-
-        notesContainer.onclick = async (e) => {
-            const item = e.target.closest('.note-item');
-            const isControl = e.target.closest('textarea, select, button');
-            
-            if (item && !isControl) {
-                const id = item.dataset.id;
-                const old = currentNotes.find(n => n.id === id);
-                item.innerHTML = `
-                    <div class="flex flex-col gap-2 w-full">
-                        <textarea class="edit-input w-full p-2 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-cyan-500 text-sm shadow-sm" rows="2">${old.text}</textarea>
-                        <div class="flex gap-1 justify-start items-center">
-                            <select class="edit-priority h-[32px] w-24 p-1 rounded-lg border-2 border-slate-200 text-sm bg-white cursor-pointer focus:outline-none">
-                                <option value="1" ${old.priority === '1' ? 'selected' : ''}>Niedrig</option>
-                                <option value="2" ${old.priority === '2' ? 'selected' : ''}>Mittel</option>
-                                <option value="3" ${old.priority === '3' ? 'selected' : ''}>Hoch</option>
-                            </select>
-                            <button class="save-btn bg-green-600 text-white btn-action shadow-sm active:scale-95">Speichern</button>
-                            <button class="delete-btn bg-red-500 text-white btn-action shadow-sm active:scale-95">Löschen</button>
-                            <button class="cancel-btn bg-slate-100 text-slate-500 border border-slate-200 btn-action active:scale-95">Abbrechen</button>
-                        </div>
-                    </div>`;
-                item.querySelector('.edit-input').focus();
-                return;
-            }
-
-            const btn = e.target.closest('button');
-            if (!btn) return;
-            const el = btn.closest('[data-id]');
-            if (!el) return;
-            const id = el.dataset.id;
-            const noteRef = doc(db, `notes/${currentUserId}/userNotes/${id}`);
-
-            if (btn.classList.contains('delete-btn')) {
-                if(confirm("Wirklich löschen?")) await deleteDoc(noteRef);
-            } else if (btn.classList.contains('save-btn')) {
-                const newText = el.querySelector('.edit-input').value.trim();
-                const newPrio = el.querySelector('.edit-priority').value;
-                if (newText) {
-                    await updateDoc(noteRef, { text: newText, priority: newPrio });
-                } else {
-                    renderNotesUI(currentNotes);
-                }
-            } else if (btn.classList.contains('cancel-btn')) {
-                renderNotesUI(currentNotes);
-            }
-        };
-
-        document.getElementById('exportCsvBtn').onclick = () => {
-            if (currentNotes.length === 0) return;
-            let csv = "data:text/csv;charset=utf-8,\uFEFFText,Priorität\n";
-            currentNotes.forEach(n => csv += `"${n.text.replace(/"/g, '""')}",${n.priority}\n`);
-            const link = document.createElement("a");
-            link.href = encodeURI(csv);
-            link.download = "notizen.csv";
-            link.click();
-        };
+        startApp();
     </script>
 </body>
 </html>
