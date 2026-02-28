@@ -133,14 +133,37 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
         
-        const firebaseConfig = {
-             apiKey: "AIzaSyAy_eDSW5Q9KzZFptsTK5DGthk1ed2Objc",
-             authDomain: "notizentest-1bcdc.firebaseapp.com",
-             projectId: "notizentest-1bcdc",
-             storageBucket: "notizentest-1bcdc.firebasestorage.app",
-             messagingSenderId: "570048086764",
-             appId: "1:570048086764:web:9137d39d90d16b423a1bc9"
-        };
+        // 1. Funktion zum Abrufen des Keys von deiner "Brücke" (Cloud Function)
+async function getSecureApiKey() {
+    try {
+        const response = await fetch('https://DEINE_REGION-DEIN_PROJEKT.cloudfunctions.net/getApiKey');
+        const data = await response.json();
+        return data.apiKey; // Liefert den Key aus dem Secret Manager
+    } catch (error) {
+        console.error("Sicherheits-Check fehlgeschlagen:", error);
+        return null;
+    }
+}
+
+// 2. Initialisierung anpassen
+async function initializeAppSecurely() {
+    const key = await getSecureApiKey();
+    
+    const firebaseConfig = {
+        apiKey: key, // Dynamisch geladen
+        authDomain: "kalender-91d50.firebaseapp.com",
+        projectId: "kalender-91d50",
+        storageBucket: "kalender-91d50.appspot.com",
+        messagingSenderId: "774945115160",
+        appId: "1:774945115160:web:95f..."
+    };
+
+    // Firebase mit der sicheren Config starten
+    const app = initializeApp(firebaseConfig);
+    console.log("Firebase sicher initialisiert.");
+}
+
+initializeAppSecurely();
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
