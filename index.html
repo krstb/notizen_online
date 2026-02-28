@@ -39,7 +39,7 @@
         <h1 class="text-lg font-bold text-center text-slate-800 mb-3">Notizen Online</h1>
 
         <div id="authPanelTop" class="text-center mb-2">
-            <button id="loginBtn" class="bg-cyan-600 text-white btn-login hover:bg-cyan-700 active:scale-95 shadow-sm">
+            <button id="loginBtn" class="bg-cyan-600 text-white btn-login hover:bg-cyan-700 active:scale-95 shadow-sm hidden">
                 Login mit Google
             </button>
         </div>
@@ -59,12 +59,12 @@
             </form>
     
             <div id="notesContainer" class="space-y-2">
-                <p id="loadingMessage" class="text-center text-slate-400 text-xs italic py-2">Lade Daten...</p>
+                <p id="loadingMessage" class="text-center text-slate-400 text-xs italic py-2">Initialisiere...</p>
             </div>
     
             <div id="authFooter" class="mt-6 pt-2 border-t border-slate-100 text-center flex justify-center gap-4">
-                <button id="exportCsvBtn" class="text-slate-400 text-[10px] hover:text-slate-600 transition-colors">CSV Export</button>
-                <button id="logoutBtn" class="text-red-300 text-[10px] hover:text-red-500 transition-colors">Abmelden</button>
+                <button id="exportCsvBtn" class="text-slate-400 text-[10px] hover:text-slate-600">CSV Export</button>
+                <button id="logoutBtn" class="text-red-300 text-[10px] hover:text-red-500">Abmelden</button>
             </div>
         </div>
     </div>
@@ -76,22 +76,21 @@
 
         let auth, db, currentUserId = null, currentNotes = [], unsubscribeNotes = null;
         const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' }); // Forciert das Auswahlfenster
+        provider.setCustomParameters({ prompt: 'select_account' });
         
         const priorityColors = { '3': 'bg-red-500', '2': 'bg-yellow-400', '1': 'bg-green-500' };
 
-        // DOM Elemente
         const loginBtn = document.getElementById('loginBtn');
         const appContent = document.getElementById('appContent');
         const notesContainer = document.getElementById('notesContainer');
         const noteInput = document.getElementById('noteInput');
 
-        // 1. Sicherheits-Check & Firebase Init
+        // Initialisierungsprozess
         async function startApp() {
             try {
-                // Abfrage an Frankfurt (Region 3)
+                // Abfrage der Frankfurt-Region (CORS-Header in Cloud Function zwingend erforderlich!)
                 const response = await fetch('https://get-api-key-570048086764.europe-west3.run.app');
-                if (!response.ok) throw new Error('API Key Fehler');
+                if (!response.ok) throw new Error('CORS oder Netzwerkfehler');
                 const data = await response.json();
 
                 const firebaseConfig = {
@@ -107,33 +106,55 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                initAuthListener();
-                setupActions();
+                // Erst nach erfolgreichem Init die Auth-Überwachung starten
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        appContent.classList.remove("hidden");
+                        loginBtn.classList.add("hidden");
+                        startDataSync(user.uid);
+                    } else {
+                        appContent.classList.add("hidden");
+                        loginBtn.classList.remove("hidden");
+                    }
+                });
+
+                setupEventListeners();
 
             } catch (error) {
-                console.error("Kritischer Fehler beim Start:", error);
-                document.getElementById('loadingMessage').innerText = "Sicherheitsprüfung fehlgeschlagen.";
+                console.error("Start-Fehler:", error);
+                document.getElementById('loadingMessage').innerHTML = 
+                    `<span class="text-red-500">Fehler: API nicht erreichbar (CORS).</span>`;
+                // Notfall-Anzeige des Buttons, damit User es wenigstens versuchen kann
+                loginBtn.classList.remove("hidden");
             }
         }
 
-        // 2. Auth Status überwachen
-        function initAuthListener() {
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    currentUserId = user.uid;
-                    appContent.classList.remove("hidden");
-                    loginBtn.classList.add("hidden");
-                    startSnapshot(user.uid);
-                } else {
-                    appContent.classList.add("hidden");
-                    loginBtn.classList.remove("hidden");
-                    if (unsubscribeNotes) unsubscribeNotes();
+        function setupEventListeners() {
+            loginBtn.onclick = async () => {
+                if (!auth) return alert("Sicherheits-Check läuft noch...");
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (e) {
+                    alert("Browser blockiert Popup oder Domain nicht erlaubt.");
                 }
-            });
+            };
+
+            document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => location.reload());
+
+            document.getElementById('noteForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const text = noteInput.value.trim();
+                if (text && currentUserId) {
+                    await addDoc(collection(db, `notes/${currentUserId}/userNotes`), {
+                        text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
+                    });
+                    noteInput.value = '';
+                }
+            };
         }
 
-        // 3. Echtzeit-Daten (Firestore)
-        function startSnapshot(uid) {
+        function startDataSync(uid) {
             const q = query(collection(db, `notes/${uid}/userNotes`), orderBy("priority", "desc"), orderBy("text", "asc"));
             unsubscribeNotes = onSnapshot(q, s => {
                 currentNotes = s.docs.map(d => ({id: d.id, ...d.data()}));
@@ -147,61 +168,15 @@
                 const el = document.createElement('div');
                 el.className = 'note-item flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm mb-2 cursor-pointer';
                 el.dataset.id = note.id;
-                el.innerHTML = `
-                    <div class="flex flex-1 min-w-0 items-start pointer-events-none">
-                         <span class="w-2.5 h-2.5 rounded-full mr-2.5 mt-1.5 flex-shrink-0 ${priorityColors[note.priority] || 'bg-gray-300'}"></span>
-                         <p class="text-slate-700 text-sm leading-snug note-text-container flex-1">${note.text}</p>
-                    </div>`;
+                el.innerHTML = `<div class="flex flex-1 items-start pointer-events-none">
+                    <span class="w-2.5 h-2.5 rounded-full mr-2.5 mt-1.5 flex-shrink-0 ${priorityColors[note.priority]}"></span>
+                    <p class="text-slate-700 text-sm note-text-container">${note.text}</p>
+                </div>`;
+                el.onclick = () => { if(confirm("Notiz löschen?")) deleteDoc(doc(db, `notes/${currentUserId}/userNotes/${note.id}`)); };
                 notesContainer.appendChild(el);
             });
         }
 
-        // 4. Interaktionen
-        function setupActions() {
-            loginBtn.onclick = async () => {
-                try {
-                    await signInWithPopup(auth, provider);
-                } catch (e) {
-                    console.error("Login Fehler:", e);
-                    alert("Login konnte nicht gestartet werden. Prüfe Popup-Blocker!");
-                }
-            };
-
-            document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => location.reload());
-
-            document.getElementById('noteForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const text = noteInput.value.trim();
-                if (!text || !currentUserId) return;
-                await addDoc(collection(db, `notes/${currentUserId}/userNotes`), {
-                    text, priority: document.getElementById('priorityInput').value, createdAt: serverTimestamp()
-                });
-                noteInput.value = '';
-            };
-
-            // Notiz löschen/bearbeiten (Klick auf Item)
-            notesContainer.onclick = async (e) => {
-                const item = e.target.closest('.note-item');
-                if (item) {
-                    const id = item.dataset.id;
-                    if(confirm("Notiz löschen?")) {
-                        await deleteDoc(doc(db, `notes/${currentUserId}/userNotes/${id}`));
-                    }
-                }
-            };
-
-            document.getElementById('exportCsvBtn').onclick = () => {
-                if (currentNotes.length === 0) return;
-                let csv = "data:text/csv;charset=utf-8,\uFEFFText,Prioritaet\n";
-                currentNotes.forEach(n => csv += `"${n.text.replace(/"/g, '""')}",${n.priority}\n`);
-                const link = document.createElement("a");
-                link.href = encodeURI(csv);
-                link.download = "notizen.csv";
-                link.click();
-            };
-        }
-
-        // App starten
         startApp();
     </script>
 </body>
