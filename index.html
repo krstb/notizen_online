@@ -23,12 +23,14 @@
     </script>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        html {background-color: #000000 !important;overscroll-behavior-y: none;}
-    </style>    
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+        /* Fix für PWA-Ränder und den blauen Balken */
+        html {background-color: #000000 !important;
+              overscroll-behavior-y: none;
+        }
         
         textarea { 
             resize: none !important; 
